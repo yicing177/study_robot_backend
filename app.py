@@ -6,31 +6,21 @@ from firebase_config import initialize_firebase
 
 import os
 
-
-# 載入 .env 檔案
 load_dotenv()
-
-# 從 .env 文件中讀取 Firebase 金鑰路徑
 firebase_credentials_path = os.getenv('FIREBASE_CREDENTIALS_PATH')
-
-# 初始化 Firebase
 initialize_firebase()
 
-# 創建 Flask 應用
 app = Flask(__name__)
-
-# 使用 Firestore 客戶端
 db = firestore.client()
+CORS(app)
 
-
-CORS(app)  # 允許前端請求
-
-
+# ✅ 匯入你所有的 blueprint
 from routes.auth_routes import auth_bp
-app.register_blueprint(auth_bp)
-# 註冊 Blueprint
-app.register_blueprint(auth_bp)
+from routes.material_routes import material_bp
 
+# ✅ 註冊 blueprint
+app.register_blueprint(auth_bp)
+app.register_blueprint(material_bp)  # ← 加上這行！
 
 @app.route('/')
 def home():
@@ -43,5 +33,6 @@ def test_api():
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
 
-
-
+print("\n=== 所有已註冊的路由 ===")
+for rule in app.url_map.iter_rules():
+    print(rule)
