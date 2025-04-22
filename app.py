@@ -3,7 +3,7 @@ from firebase_admin import credentials, firestore
 from flask_cors import CORS
 from dotenv import load_dotenv
 from firebase_config import initialize_firebase
-from routes.auth import register, login  # 匯入 auth.py 中的函數
+
 import os
 
 
@@ -26,15 +26,10 @@ db = firestore.client()
 CORS(app)  # 允許前端請求
 
 
-# 註冊路由
-@app.route('/register', methods=['POST'])
-def register_route():
-    print("收到請求:", request.json)
-    return register()  # 調用 auth.py 中的 register 函數
-
-@app.route('/login', methods=['POST'])
-def login_route():
-    return login()  # 調用 auth.py 中的 login 函數
+from routes.auth_routes import auth_bp
+app.register_blueprint(auth_bp)
+# 註冊 Blueprint
+app.register_blueprint(auth_bp)
 
 
 @app.route('/')
