@@ -1,16 +1,20 @@
-from flask import request, jsonify
-from firebase_admin import auth , firestore
+from flask import Blueprint,request, jsonify
+from firebase_admin import auth 
 from firebase_config import db  # 從 firebase_config 匯入 Firestore
 
+# 建立 Blueprint 實例
+auth_bp = Blueprint("auth", __name__)
+# 指定 users collection
 users_ref = db.collection("users")
-# 註冊路由
+
+
+@auth_bp.route("/register", methods=["POST"])
 def register():
     data = request.json
     print("接收到的資料：", data)  # 打印請求的資料
     email = data.get('email')
     password = data.get('password')
     
-
     # 檢查是否已經註冊
     existing_user = users_ref.where("email", "==", email).get()
     if existing_user:  # 確保有查到資料才判斷已註冊
@@ -27,7 +31,7 @@ def register():
         return jsonify({"error": str(e)}), 400
 
     
-
+@auth_bp.route("/login", methods=["POST"])
 def login():
     data = request.json
     email = data.get('email')
