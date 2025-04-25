@@ -4,6 +4,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from firebase_config import initialize_firebase
 from routes.auth import register, login  # 匯入 auth.py 中的函數
+from routes.voice import voice_bp
 import os
 
 
@@ -18,13 +19,13 @@ initialize_firebase()
 
 # 創建 Flask 應用
 app = Flask(__name__)
+app.register_blueprint(voice_bp,url_prefix='/routes')
 
 # 使用 Firestore 客戶端
 db = firestore.client()
 
 
 CORS(app)  # 允許前端請求
-
 
 # 註冊路由
 @app.route('/register', methods=['POST'])
