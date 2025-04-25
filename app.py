@@ -18,7 +18,7 @@ CORS(app)
 from routes.auth_routes import auth_bp
 from routes.material_routes import material_bp
 
-# ✅ 註冊 blueprint
+# ✅ 註冊 blueprint 
 app.register_blueprint(auth_bp)
 app.register_blueprint(material_bp)  # ← 加上這行！
 
