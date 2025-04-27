@@ -11,7 +11,7 @@ firebase_credentials_path = os.getenv('FIREBASE_CREDENTIALS_PATH')
 initialize_firebase()
 
 app = Flask(__name__)
-app.register_blueprint(voice_bp,url_prefix='/routes')
+
 
 # 使用 Firestore 客戶端
 
