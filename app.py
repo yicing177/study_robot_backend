@@ -3,7 +3,7 @@ from firebase_admin import credentials, firestore
 from flask_cors import CORS
 from dotenv import load_dotenv
 from firebase_config import initialize_firebase
-
+from routes.auth_routes import register, login  # 匯入 auth.py 中的函數
 import os
 
 load_dotenv()
@@ -11,16 +11,23 @@ firebase_credentials_path = os.getenv('FIREBASE_CREDENTIALS_PATH')
 initialize_firebase()
 
 app = Flask(__name__)
+
+
+# 使用 Firestore 客戶端
+
 db = firestore.client()
 CORS(app)
 
 # ✅ 匯入你所有的 blueprint
 from routes.auth_routes import auth_bp
 from routes.material_routes import material_bp
+from routes.voice import voice_bp
+
 
 # ✅ 註冊 blueprint 
 app.register_blueprint(auth_bp)
 app.register_blueprint(material_bp)  # ← 加上這行！
+app.register_blueprint(voice_bp,url_prefix='/routes')
 
 @app.route('/')
 def home():
@@ -36,3 +43,5 @@ if __name__ == '__main__':
 print("\n=== 所有已註冊的路由 ===")
 for rule in app.url_map.iter_rules():
     print(rule)
+
+
