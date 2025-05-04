@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from firebase_admin import credentials, firestore
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -37,11 +37,25 @@ def home():
 def test_api():
     return jsonify({"message": "Hello from Flask!"})
 
+
+
+# 找出目前這個 app.py 的資料夾路徑
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+@app.route('/dir_tts_result/<path:filename>')
+def serve_tts_file(filename):
+    folder_path = os.path.join(BASE_DIR, 'dir_tts_result')
+    return send_from_directory(folder_path, filename)
+
+@app.route('/dir_stt_result/<path:filename>')
+def serve_stt_file(filename):
+    folder_path = os.path.join(BASE_DIR, 'dir_stt_result')
+    return send_from_directory(folder_path, filename)
+
+# 要寫在最後！！！！！
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
 
 print("\n=== 所有已註冊的路由 ===")
 for rule in app.url_map.iter_rules():
     print(rule)
-
-
