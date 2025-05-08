@@ -12,7 +12,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 openai.organization = os.getenv("OPENAI_ORG_ID")
 
 # 初始系統提示
-system_prompt = {"role": "system", "content": "你是一個溫柔有耐心的英文學習伴讀機器人，請使用簡單語言並加入例句解釋。"}
+system_prompt = {"role": "system", "content": "你是一個溫柔有耐心的英文學習伴讀機器人，請使用簡單語言並加入例句解釋。請用繁體中文回答。"}
 chat_history = [system_prompt]          # 有限長度，供 GPT 回應使用
 all_chat_history = [system_prompt]      # 完整記錄，供 summarize 使用
 
@@ -27,6 +27,41 @@ def update_chat_history(role, content):
         chat_history.pop(1)
 
     all_chat_history.append({"role": role, "content": content})
+
+def map_rate_to_scale(rate_label):
+    return {
+        "slow": 30,
+        "normal": 60,
+        "fast": 90
+    }.get(rate_label, 60)
+
+def map_style_degree_to_scale(style_degree):
+    try:
+        s = float(style_degree)
+        return max(0.1, min(round(s * 0.6, 2), 2.0))
+    except:
+        return 1.0
+
+def analyze_speech_parameters_with_gpt(text):
+    try:
+        messages = [
+            {"role": "system", "content": "請根據以下內容判斷適合的語音風格，請以 JSON 格式回傳：{\"emotion\": \"cheerful, sad, excited, friendly, hopeful, serious, gentle, affectionate, calm\" 之一, \"rate\": \"slow|normal|fast\", \"style_degree\": 1~3 數字}"},
+            {"role": "user", "content": text}
+        ]
+        response = openai.ChatCompletion.create(
+            model="gpt-4o",
+            messages=messages
+        )
+        result = response.choices[0].message["content"].strip()
+        parsed = json.loads(result)
+        return {
+            "emotion": parsed.get("emotion", "calm"),
+            "rate": map_rate_to_scale(parsed.get("rate", "normal")),
+            "style_degree": map_style_degree_to_scale(parsed.get("style_degree", 1))
+        }
+    except Exception as e:
+        print(f"[語音參數分析錯誤] {e}")
+        return {"emotion": "calm", "rate": 60, "style_degree": 1.0}
 
 # 對話邏輯
 def get_gpt_reply(user_input, user_id="unknown"):
@@ -50,6 +85,9 @@ def get_gpt_reply(user_input, user_id="unknown"):
         folder_path = "dir_text"
         os.makedirs(folder_path, exist_ok=True)
 
+        # 呼叫 GPT 判斷情緒
+        speech_settings = analyze_speech_parameters_with_gpt(reply_text)
+
         # 存 .txt
         filename = f"{user_id}_{timestamp}.txt"
         file_path = os.path.join(folder_path, filename)
@@ -59,17 +97,31 @@ def get_gpt_reply(user_input, user_id="unknown"):
         # 存 .json（給 TTS 用）
         json_path = os.path.join(folder_path, f"{user_id}_{timestamp}.json")
         with open(json_path, "w", encoding="utf-8") as jf:
-            json.dump({"text": reply_text}, jf, ensure_ascii=False, indent=4)
+            json.dump({
+                "text": reply_text,
+                "emotion": speech_settings["emotion"],
+                "rate": speech_settings["rate"],  # 轉換為 0-100 數值
+                "style_degree": speech_settings["style_degree"]  # 轉換為 0.1–2.0 浮點數
+            }, jf, ensure_ascii=False, indent=4)
 
         return {
             "reply": reply_text,
-            "filename": f"{user_id}_{timestamp}.json"
+            "filename": f"{user_id}_{timestamp}.json",
+            "emotion": speech_settings["emotion"],
+            "rate": speech_settings["rate"],
+            "style_degree": speech_settings["style_degree"]
         }
 
 
     except Exception as e:
         print(f"[GPT 錯誤] {e}")
-        return "抱歉，我目前無法提供回覆，請稍後再試一次。"
+        return {
+            "reply": "抱歉，我目前無法提供回覆，請稍後再試一次。",
+            "filename": None,
+            "emotion": "calm",
+            "rate": 60,
+            "style_degree": 1.0
+        }
 
 # 用歷史紀錄做總結
 def summarize_chat(user_id="unknown"):
