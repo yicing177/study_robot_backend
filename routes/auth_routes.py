@@ -53,7 +53,3 @@ def login():
         return jsonify({"error": "登入失敗，請確認帳號或密碼"}), 400
 
 
-
-
-    # 這裡不直接驗證密碼，因為 Firebase Authentication 需要透過前端處理
-    return jsonify({"message": "請使用 Firebase Client 取得 ID Token"}), 200
