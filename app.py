@@ -3,7 +3,7 @@ from firebase_admin import credentials, firestore
 from flask_cors import CORS
 from dotenv import load_dotenv
 from firebase_config import initialize_firebase
-from routes.auth_routes import register, login  # 匯入 auth.py 中的函數
+from routes.auth_routes import register, login  # 匯入 auth.py 中的函數 # 這段沒用到可以刪吧?
 import os
 
 load_dotenv()
@@ -22,12 +22,13 @@ CORS(app)
 from routes.auth_routes import auth_bp
 from routes.material_routes import material_bp
 from routes.voice import voice_bp
-
+from routes.gpt import gpt_bp
 
 # ✅ 註冊 blueprint
 app.register_blueprint(auth_bp)
 app.register_blueprint(material_bp)  # ← 加上這行！
 app.register_blueprint(voice_bp,url_prefix='/routes')
+app.register_blueprint(gpt_bp)
 
 @app.route('/')
 def home():
@@ -36,8 +37,6 @@ def home():
 @app.route('/api/test', methods=['GET'])
 def test_api():
     return jsonify({"message": "Hello from Flask!"})
-
-
 
 # 找出目前這個 app.py 的資料夾路徑
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
