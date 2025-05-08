@@ -3,3 +3,7 @@ serviceAccountKey.json
 
 # 忽略環境變數檔案
 .env
+
+__pycache__/
+*.pyc
+
