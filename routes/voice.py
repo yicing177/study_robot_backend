@@ -88,6 +88,9 @@ def tts():
         os.makedirs(TTS_UPLOADS_FOLDER, exist_ok=True)  # 確保資料夾存在
         output_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
         output_path = os.path.join(TTS_UPLOADS_FOLDER, output_filename)
+        
+        # 這裡新增想要的語音模型設定     
+        speech_config.speech_synthesis_voice_name = "zh-CN-XiaoshuangNeural"
 
         audio_config = speechsdk.audio.AudioOutputConfig(filename=output_path)
         synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
@@ -98,6 +101,108 @@ def tts():
                 "message": "TTS 成功",
                 "file": output_filename
             })
+        else:
+            return jsonify({"error": "TTS 失敗", "reason": str(result.reason)}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+from datetime import datetime
+
+def insert_breaks(text):
+    replacements = {
+        "。": "。<break time='500ms' strength='strong'/>",
+        ".": ".<break time='500ms' strength='strong'/>",
+        "，": "，<break time='300ms' strength='medium'/>",
+        ",": ",<break time='300ms' strength='medium'/>",
+        "：": "：<break time='200ms' strength='medium'/>",
+        ":": ":<break time='200ms' strength='medium'/>",
+        "、": "、<break time='200ms' strength='weak'/>",
+        "？": "？<break time='500ms' strength='strong'/>",
+        "?": "?<break time='500ms' strength='strong'/>",
+        "！": "！<break time='500ms' strength='strong'/>",
+        "!": "!<break time='500ms' strength='strong'/>"
+    }
+    for mark, pause in replacements.items():
+        text = text.replace(mark, pause)
+    return text
+
+@voice_bp.route("/tts_ssml", methods=["POST"])
+def tts_ssml():
+    try:
+        req = request.json
+        filename = req.get("filename")
+        voice = "zh-CN-XiaoxiaoNeural"
+        pitch = "+0%"
+        volume = "soft"
+        xml_lang = voice[:5]  # 自動設定語言
+
+        if not filename or not voice:
+            return jsonify({"error": "缺少必要參數 filename 或 voice"}), 400
+
+        # 讀取 JSON 檔案
+        filepath = os.path.join(TEXT_FOLDER, filename)
+        if not os.path.exists(filepath):
+            return jsonify({"error": f"找不到檔案：{filename}"}), 404
+
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        text = data.get("text")
+        style = data.get("emotion")
+        styledegree = str(data.get("style_degree", "1.0"))
+        rate_val = data.get("rate", "+0%")
+        rate = f"{rate_val}%" if isinstance(rate_val, int) else rate_val
+
+        if not text:
+            return jsonify({"error": "JSON 檔內沒有 text 欄位"}), 400
+
+        # 插入 break 停頓標記
+        text = insert_breaks(text)
+
+        # 初始化語音設定
+        speech_config = get_speech_config()
+        speech_config.speech_synthesis_voice_name = voice
+
+        # 檔名
+        func_name = f"tts_{style}_{styledegree}_{rate}".replace('+', 'p').replace('%', '').replace(' ', '')
+        output_filename = f"{func_name}.wav"
+        output_path = os.path.join(TTS_UPLOADS_FOLDER, output_filename)
+        os.makedirs(TTS_UPLOADS_FOLDER, exist_ok=True)
+
+        # 建立 SSML
+        if style:
+            ssml = f"""
+            <speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                   xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{xml_lang}'>
+              <voice name='{voice}'>
+                <mstts:express-as style='{style}' styledegree='{styledegree}'>
+                  <prosody rate='{rate}' pitch='{pitch}' volume='{volume}'>
+                    {text}
+                  </prosody>
+                </mstts:express-as>
+              </voice>
+            </speak>
+            """
+        else:
+            ssml = f"""
+            <speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='{xml_lang}'>
+              <voice name='{voice}'>
+                <prosody rate='{rate}' pitch='{pitch}' volume='{volume}'>
+                  {text}
+                </prosody>
+              </voice>
+            </speak>
+            """
+
+        # 執行轉換
+        audio_config = speechsdk.audio.AudioOutputConfig(filename=output_path)
+        synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+        result = synthesizer.speak_ssml_async(ssml).get()
+
+        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+            return jsonify({"message": "TTS SSML 成功", "file": output_filename})
         else:
             return jsonify({"error": "TTS 失敗", "reason": str(result.reason)}), 500
 
