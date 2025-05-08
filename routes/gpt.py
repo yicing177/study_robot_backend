@@ -24,7 +24,7 @@ def ask():
 @gpt_bp.route('/ask_from_stt', methods=['POST'])  # 從 STT JSON 自動抓輸入
 def ask_from_stt():
     data = request.get_json()
-    filepath = data.get('filepath')  # e.g., dir_stt_result/20240504_xxx.json
+    filepath = data.get('filepath')  # e.g., dir_stt_result/20240504_xx.json
     if not filepath:
         return jsonify({"error": "請提供 STT 結果的 filepath"}), 400
 
