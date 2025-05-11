@@ -21,12 +21,14 @@ CORS(app)
 # ✅ 匯入你所有的 blueprint
 from routes.auth_routes import auth_bp
 from routes.material_routes import material_bp
+from routes.calendar_routes import calendar_bp
 from routes.voice import voice_bp
 
 
 # ✅ 註冊 blueprint 
 app.register_blueprint(auth_bp)
 app.register_blueprint(material_bp)  # ← 加上這行！
+app.register_blueprint(calendar_bp)
 app.register_blueprint(voice_bp,url_prefix='/routes')
 
 @app.route('/')
