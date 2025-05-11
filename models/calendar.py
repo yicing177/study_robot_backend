@@ -1,14 +1,14 @@
 from datetime import datetime;
 
 class Calendar:
-    def __init__(self, calendar_id, user_id, title, content, datetime, xposition, yposiotion, created_at="None"):
-        self.calendar_id = self.calendar_id
-        self.user_id = self.user_id
-        self.title = self.title
-        self.content = self.content
-        self.datetime = self.datetime
-        self.xposition = self.xposition
-        self.yposition = self.yposition
+    def __init__(self, calendar_id, user_id, title, content, datetime, xposition, yposition, created_at=None):
+        self.calendar_id = calendar_id
+        self.user_id = user_id
+        self.title = title
+        self.content = content
+        self.datetime = datetime
+        self.xposition = xposition
+        self.yposition = yposition
         self.created_at = created_at or datetime.utcnow()
 
     def to_dict(self):
@@ -16,7 +16,7 @@ class Calendar:
             "calendar_id" : self.calendar_id,
             "user_id": self.user_id,
             "title" : self.title,
-            "content" : self.title,
+            "content" : self.content,
             "datetime" : self.datetime.isoformat(),
             "xposition" : self.xposition,
             "yposition" : self.yposition,
@@ -24,9 +24,9 @@ class Calendar:
         }
     
     @staticmethod
-    def from_dicit(data):
+    def from_dict(data):
         return Calendar(
-            calendar = data.get("calendar"),
+            calendar_id = data.get("calendar_id"),
             user_id = data.get("user_id"),
             title = data.get("title"),
             content = data.get("content"),
