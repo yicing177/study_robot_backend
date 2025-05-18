@@ -10,5 +10,5 @@ def upload_pdf():
     file = request.files["file"]
     file_type = file.content_type
     
-    material = upload_material(user_id, file.stream, title, file.filename,file.content_type)
+    material = upload_material(user_id, file.stream, title, file.filename,file_type)
     return jsonify({"message": "上傳成功", "material": material.to_dict()})
