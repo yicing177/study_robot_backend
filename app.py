@@ -10,12 +10,12 @@ firebase_credentials_path = os.getenv('FIREBASE_CREDENTIALS_PATH')
 initialize_firebase()
 
 app = Flask(__name__)
-
+CORS(app, origins="http://localhost:5173", methods=["GET", "POST", "DELETE", "OPTIONS"])
 
 # 使用 Firestore 客戶端
 
 db = firestore.client()
-CORS(app)
+
 
 # ✅ 匯入你所有的 blueprint
 from routes.auth_routes import auth_bp
