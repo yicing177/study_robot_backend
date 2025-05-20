@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime
 from firebase_config import db  # Firestore 客戶端
+from openai_api.gpt_quiz_service import generate_quiz_from_chat_history # 呼叫生成題目邏輯
 import json
 
 # 載入環境變數
@@ -28,6 +29,7 @@ def update_chat_history(role, content):
 
     all_chat_history.append({"role": role, "content": content})
 
+# 情緒相關設定
 def map_rate_to_scale(rate_label):
     return {
         "slow": 30,
@@ -35,6 +37,7 @@ def map_rate_to_scale(rate_label):
         "fast": 90
     }.get(rate_label, 60)
 
+# 情緒相關設定
 def map_style_degree_to_scale(style_degree):
     try:
         s = float(style_degree)
@@ -42,6 +45,7 @@ def map_style_degree_to_scale(style_degree):
     except:
         return 1.0
 
+# 自動量化情緒條件
 def analyze_speech_parameters_with_gpt(text):
     try:
         messages = [
@@ -196,4 +200,7 @@ def reset_chat_history():
     global chat_history, all_chat_history
     chat_history = [system_prompt]
     all_chat_history = [system_prompt]
+
+def generate_quiz_from_chat(num_questions=3):
+    return generate_quiz_from_chat_history(all_chat_history, num_questions)
 
