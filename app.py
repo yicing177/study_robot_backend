@@ -3,7 +3,7 @@ from firebase_admin import credentials, firestore
 from flask_cors import CORS
 from dotenv import load_dotenv
 from firebase_config import initialize_firebase
-from routes.auth_routes import register, login  # 匯入 auth.py 中的函數 # 這段沒用到可以刪吧?
+from routes.auth_routes import register, login  # 匯入 auth.py 中的函數 
 import os
 
 load_dotenv()
@@ -24,13 +24,15 @@ from routes.material_routes import material_bp
 from routes.calendar_routes import calendar_bp
 from routes.voice import voice_bp
 from routes.gpt import gpt_bp
+from routes.quiz import quiz_bp
 
 # ✅ 註冊 blueprint 
 app.register_blueprint(auth_bp)
 app.register_blueprint(material_bp)  # ← 加上這行！
 app.register_blueprint(calendar_bp)
 app.register_blueprint(voice_bp,url_prefix='/routes')
-app.register_blueprint(gpt_bp)
+app.register_blueprint(gpt_bp, url_prefix="/gpt")
+app.register_blueprint(quiz_bp, url_prefix="/quiz")
 
 @app.route('/')
 def home():
