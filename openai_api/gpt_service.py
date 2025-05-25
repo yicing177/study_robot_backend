@@ -6,6 +6,7 @@ from datetime import datetime
 from firebase_config import db  # Firestore 客戶端
 from openai_api.gpt_quiz_service import generate_quiz_from_chat_history # 呼叫生成題目邏輯
 import json
+import re
 
 # 載入環境變數
 load_dotenv()
@@ -92,20 +93,23 @@ def get_gpt_reply(user_input, user_id="unknown"):
         # 呼叫 GPT 判斷情緒
         speech_settings = analyze_speech_parameters_with_gpt(reply_text)
 
+        # 清理 TTS 用的文字
+        cleaned_tts_text = remove_emoji(clean_text_for_tts(reply_text))
+
         # 存 .txt
         filename = f"{user_id}_{timestamp}.txt"
         file_path = os.path.join(folder_path, filename)
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(reply_text)
 
-        # 存 .json（給 TTS 用）
+        # 存 .JSON
         json_path = os.path.join(folder_path, f"{user_id}_{timestamp}.json")
         with open(json_path, "w", encoding="utf-8") as jf:
             json.dump({
-                "text": reply_text,
+                "text": cleaned_tts_text,
                 "emotion": speech_settings["emotion"],
-                "rate": speech_settings["rate"],  # 轉換為 0-100 數值
-                "style_degree": speech_settings["style_degree"]  # 轉換為 0.1–2.0 浮點數
+                "rate": speech_settings["rate"],
+                "style_degree": speech_settings["style_degree"]
             }, jf, ensure_ascii=False, indent=4)
 
         return {
@@ -201,6 +205,31 @@ def reset_chat_history():
     chat_history = [system_prompt]
     all_chat_history = [system_prompt]
 
+# 生成題目 (寫在另外一個py裡)
 def generate_quiz_from_chat(num_questions=3):
     return generate_quiz_from_chat_history(all_chat_history, num_questions)
+
+# 清除JSON的強調符號
+def clean_text_for_tts(text):
+    # 移除 **、*、__、_ 強調語法
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    text = re.sub(r"__(.*?)__", r"\1", text)
+    text = re.sub(r"\*(.*?)\*", r"\1", text)
+    text = re.sub(r"_(.*?)_", r"\1", text)
+
+    # 移除 markdown 列表符號（如 - 列表）
+    text = re.sub(r"^- ", "", text, flags=re.MULTILINE)
+    return text
+
+# 清除JSON的表情符號
+def remove_emoji(text):
+    emoji_pattern = re.compile(
+        "["
+        u"\U0001F600-\U0001F64F"  # 😀 表情
+        u"\U0001F300-\U0001F5FF"  # 💡 符號
+        u"\U0001F680-\U0001F6FF"  # 🚀 車輛
+        u"\U0001F1E0-\U0001F1FF"  # 🇺🇸 國旗
+        "]+", flags=re.UNICODE
+    )
+    return emoji_pattern.sub(r'', text)
 
