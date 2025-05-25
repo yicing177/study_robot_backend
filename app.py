@@ -22,14 +22,17 @@ db = firestore.client()
 from routes.auth_routes import auth_bp
 from routes.material_routes import material_bp
 from routes.calendar_routes import calendar_bp
+from routes.music_routes import music_bp
 from routes.voice import voice_bp
 from routes.gpt import gpt_bp
 from routes.quiz import quiz_bp
+
 
 # ✅ 註冊 blueprint 
 app.register_blueprint(auth_bp)
 app.register_blueprint(material_bp)  # ← 加上這行！
 app.register_blueprint(calendar_bp)
+app.register_blueprint(music_bp)
 app.register_blueprint(voice_bp,url_prefix='/routes')
 app.register_blueprint(gpt_bp, url_prefix="/gpt")
 app.register_blueprint(quiz_bp, url_prefix="/quiz")
