@@ -6,6 +6,7 @@ from openai_api.gpt_service import (
     get_user_summaries,
     get_text_from_stt_file
 )
+from openai_api.gpt_highlight import handle_highlight_action
 
 gpt_bp = Blueprint('gpt', __name__)
 
@@ -54,3 +55,30 @@ def get_history():
     user_id = data.get('user_id', 'unknown')
     summaries = get_user_summaries(user_id)
     return jsonify({"summaries": summaries})
+
+@gpt_bp.route('/highlight_action', methods=['POST'])
+def highlight_action():
+    data = request.get_json()
+    user_id = data.get("user_id", "unknown")
+    text = data.get("text", "").strip()
+    action = data.get("action", "read")
+
+    if not text:
+        return jsonify({"error": "缺少 text"}), 400
+
+    # 如果是朗讀（TTS），走 TTS 流程，不用經過 handle_highlight_action
+    if action == "read":
+        try:
+            tts_file = generate_tts_for_text(text, user_id)
+            return jsonify({"tts_url": f"/dir_tts_result/{tts_file}"}), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    # 其他 action（如翻譯、例句），才呼叫 handle_highlight_action
+    try:
+        reply = handle_highlight_action(text, action)
+        return jsonify({"reply": reply}), 200
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
