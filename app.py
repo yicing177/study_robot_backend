@@ -3,7 +3,6 @@ from firebase_admin import credentials, firestore
 from flask_cors import CORS
 from dotenv import load_dotenv
 from firebase_config import initialize_firebase
-from routes.auth_routes import register, login  # 匯入 auth.py 中的函數 
 import os
 
 load_dotenv()

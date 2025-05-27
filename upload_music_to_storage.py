@@ -15,12 +15,12 @@ for file_name in files:
     title = file_name.replace(".mp3","")
     file_path = os.path.join(music_folder, file_name) 
 
-    blob = bucket.blob(f"music/{file_name}")
+    blob = bucket.blob(f"musics/{file_name}")
     blob.upload_from_filename(file_path)
     blob.make_public()
     url = blob.public_url
 
-    db.collection("music").add({
+    db.collection("musics").add({
         "user_id" : "system",
         "title" : title,
         "url" : url
