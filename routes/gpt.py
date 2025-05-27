@@ -6,7 +6,7 @@ from openai_api.gpt_service import (
     get_user_summaries,
     get_text_from_stt_file
 )
-from openai_api.gpt_highlight import handle_highlight_action
+from openai_api.gpt_highlight import handle_highlight_action, generate_tts_for_text
 
 gpt_bp = Blueprint('gpt', __name__)
 
