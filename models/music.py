@@ -1,5 +1,4 @@
 class Music:
-
     def __init__(self, user_id, title, url):
         self.user_id = user_id
         self.title = title
