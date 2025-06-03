@@ -3,7 +3,7 @@ from firebase_admin import credentials, firestore
 from flask_cors import CORS
 from dotenv import load_dotenv
 from firebase_config import initialize_firebase
-from routes.auth_routes import register, login  # 匯入 auth.py 中的函數
+from routes.auth_routes import register, login  # 匯入 auth.py 中的函數 
 import os
 
 load_dotenv()
@@ -11,23 +11,28 @@ firebase_credentials_path = os.getenv('FIREBASE_CREDENTIALS_PATH')
 initialize_firebase()
 
 app = Flask(__name__)
-
+CORS(app, origins="http://localhost:5173", methods=["GET", "POST", "DELETE", "OPTIONS"], supports_credentials=True)
 
 # 使用 Firestore 客戶端
 
 db = firestore.client()
-CORS(app)
+
 
 # ✅ 匯入你所有的 blueprint
 from routes.auth_routes import auth_bp
 from routes.material_routes import material_bp
+from routes.calendar_routes import calendar_bp
 from routes.voice import voice_bp
-
+from routes.gpt import gpt_bp
+from routes.quiz import quiz_bp
 
 # ✅ 註冊 blueprint 
 app.register_blueprint(auth_bp)
 app.register_blueprint(material_bp)  # ← 加上這行！
+app.register_blueprint(calendar_bp)
 app.register_blueprint(voice_bp,url_prefix='/routes')
+app.register_blueprint(gpt_bp, url_prefix="/gpt")
+app.register_blueprint(quiz_bp, url_prefix="/quiz")
 
 @app.route('/')
 def home():
@@ -36,8 +41,6 @@ def home():
 @app.route('/api/test', methods=['GET'])
 def test_api():
     return jsonify({"message": "Hello from Flask!"})
-
-
 
 # 找出目前這個 app.py 的資料夾路徑
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
