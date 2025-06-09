@@ -10,7 +10,11 @@ firebase_credentials_path = os.getenv('FIREBASE_CREDENTIALS_PATH')
 initialize_firebase()
 
 app = Flask(__name__)
-CORS(app, origins="http://localhost:5173", methods=["GET", "POST", "DELETE", "OPTIONS"], supports_credentials=True)
+CORS(app,
+     origins="http://localhost:5173",
+     methods=["GET", "POST", "DELETE", "OPTIONS"],
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"])
 
 # 使用 Firestore 客戶端
 
