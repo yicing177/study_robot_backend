@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from firebase_admin import credentials, firestore
 from flask_cors import CORS
 from dotenv import load_dotenv
-from firebase_config import initialize_firebase
+from firebase_config import initialize_firebase, firebase_config_dict
 import os
 
 load_dotenv()
