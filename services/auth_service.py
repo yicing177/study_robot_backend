@@ -1,49 +1,45 @@
 from firebase_config import db 
-import uuid
+from flask import jsonify, request
 from firebase_admin import auth as firebase_auth
 from firebase_admin import exceptions as firebase_exceptions
 from werkzeug.security import generate_password_hash, check_password_hash
 from models.user import User
+import pyrebase
+from firebase_config import firebase_config_dict  # 你的 Firebase 設定 dict
+
+firebase = pyrebase.initialize_app(firebase_config_dict)
+auth = firebase.auth()
 def register_user(email: str,password: str):
-    
+
+    existing_user = db.collection("users").where("email", "==", email).get()# 檢查是否已經註冊
+    if existing_user:  # 確保有查到資料才判斷已註冊
+        raise ValueError("email 被註冊過了")
+    if len(password) < 8:
+        raise ValueError("太短了")
     try:
         # 1) 在 Firebase Authentication 中创建账号
-        fb_user = firebase_auth.create_user(
-            email=email,
-            password=password
-        )
-    except firebase_exceptions.AlreadyExistsError:
-        # 如果邮箱已经存在
-        raise ValueError("Email 已经被注册")
+        fb_user = firebase_auth.create_user(email=email,password=password)
+    except firebase_exceptions.AlreadyExistsError:      
+        raise ValueError("Email 已經被註冊")# 如果邮箱已经存在
     except Exception as e:
-        # 其它 Auth 层面的错误
-        raise RuntimeError(f"Auth 服务异常：{e}")
+        raise RuntimeError(f"Auth 服务异常：{e}")# 其它 Auth 层面的错误
 
     # 2) （可选）将用户信息写入 Firestore
-    user = User(
-        user_id=fb_user.uid,
-        email=email,
-        # password 这里不存明文，也可以存个占位
-        password=None
-    )
+    user = User(user_id=fb_user.uid,email=email,)
     db.collection("users").document(fb_user.uid).set(user.to_dict())
     return fb_user.uid
 def login_user(email: str, password: str):
-    #看email存在嗎 註冊過嗎
-    coll=db.collection("users")
-    existing=coll.where("email","==",email).get()
-
-    if not existing:
-        raise ValueError("Email not exist, please register")
-    
-    # 讀回來的使用者資料在 Firestore，包含 hashed password
-    user_doc = existing[0].to_dict()
-    if not check_password_hash(user_doc["password"], password):
-        raise ValueError("密碼錯誤")
-
-    # （可選）同時也可以向 Firebase Auth 要一張 custom token
-    firebase_user = firebase_auth.get_user_by_email(email)
-    return {"uid": firebase_user.uid, "email": firebase_user.email}
+ 
+    try:
+        user = auth.sign_in_with_email_and_password(email, password)
+        return {
+            "uid" : user["localId"] ,
+            "email" : email, 
+            "idToken" : user["idToken"]
+        }
+    except Exception as e:
+        print("登入錯誤", e)
+        raise ValueError("帳號密碼錯誤")
 
 
 
