@@ -1,5 +1,4 @@
 from firebase_config import db 
-from flask import jsonify, request
 from firebase_admin import auth as firebase_auth
 from firebase_admin import exceptions as firebase_exceptions
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -35,12 +34,21 @@ def login_user(email: str, password: str):
         return {
             "uid" : user["localId"] ,
             "email" : email, 
-            "idToken" : user["idToken"]
+            "id_token" : user["idToken"]
         }
     except Exception as e:
         print("登入錯誤", e)
         raise ValueError("帳號密碼錯誤")
 
+def verify_id_token(id_token):
+    try:
+        decoded_token = firebase_auth.verify_id_token(id_token)
+        return {
+            "email" : decoded_token.get("email" ,""),
+            "uid": decoded_token["uid"]
+        }
+    except Exception as e:
+        raise ValueError("token 過期") 
 
 
 

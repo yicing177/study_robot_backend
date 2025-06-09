@@ -1,7 +1,10 @@
 from flask import Blueprint,request, jsonify
 from firebase_admin import auth 
+from flask import g
+from functools import wraps
 from firebase_config import db  # 從 firebase_config 匯入 Firestore
 from services.auth_service import register_user, login_user
+from services.auth_service import verify_id_token
 
 # 建立 Blueprint 實例
 auth_bp = Blueprint("auth", __name__)
@@ -48,5 +51,17 @@ def login():
     except Exception as e:
         return jsonify({"error":"回傳錯誤"}), 400
 
-
-
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        id_token = request.headers.get("Authorization")
+        if not id_token:
+            return jsonify({"error":"請先登入"}), 401
+        try:
+            user_info=verify_id_token(id_token)
+            g.user = user_info# ✅ 暫存 user info 給後面的 view function 用
+            g.user_id = user_info["uid"]
+        except Exception as e:
+            return jsonify({"error":str(e)}), 401
+        return f(*args, **kwargs)
+    return decorated_function
