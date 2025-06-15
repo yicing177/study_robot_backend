@@ -1,6 +1,5 @@
 from flask import Blueprint,jsonify,request,g
 from services.calendar_service import create_calendar, get_calendars_by_user, delete_calendar, update_calendar
-from services.auth_service import verify_id_token
 from routes.auth_routes import login_required
 calendar_bp = Blueprint("calendar",__name__)
 

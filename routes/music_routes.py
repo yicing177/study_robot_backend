@@ -1,11 +1,13 @@
 from flask import Blueprint, jsonify
 from models.music import Music
 from firebase_admin import firestore
-
+from routes.auth_routes import login_required 
 music_bp = Blueprint("music",__name__ )
 db = firestore.client()
 
 @music_bp.route("/music/<title>" , methods=["GET"])
+@login_required
+
 def get_music(title):
     try:
     
