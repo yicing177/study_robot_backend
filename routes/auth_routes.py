@@ -51,7 +51,7 @@ def login():
     except Exception as e:
         return jsonify({"error":"回傳錯誤"}), 400
 
-def login_required(f):
+def login_required(f):#voice 還沒處理
     @wraps(f)
     def decorated_function(*args, **kwargs):
         id_token = request.headers.get("Authorization")
