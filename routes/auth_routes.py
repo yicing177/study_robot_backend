@@ -55,10 +55,12 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         id_token = request.headers.get("Authorization")
+        print("收到 token：", id_token)
         if not id_token:
             return jsonify({"error":"請先登入"}), 401
         try:
             user_info=verify_id_token(id_token)
+
             g.user = user_info# ✅ 暫存 user info 給後面的 view function 用
             g.user_id = user_info["uid"]
         except Exception as e:
