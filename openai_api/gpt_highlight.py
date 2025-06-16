@@ -16,7 +16,7 @@ def generate_tts_for_text(text, user_id="anonymous"):
 
     # 2. 呼叫原本的 /tts API（用 POST + filename）
     try:
-        response = requests.post("http://localhost:5000/tts", json={"filename": filename})
+        response = requests.post("http://localhost:5000/routes/tts", json={"filename": filename})
         result = response.json()
         if "file" in result:
             return result["file"]  # 回傳音檔名稱

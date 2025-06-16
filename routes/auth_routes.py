@@ -1,12 +1,13 @@
 from flask import Blueprint,request, jsonify
 from firebase_admin import auth 
+from flask import g
+from functools import wraps
 from firebase_config import db  # 從 firebase_config 匯入 Firestore
+from services.auth_service import register_user, login_user
+from services.auth_service import verify_id_token
 
 # 建立 Blueprint 實例
 auth_bp = Blueprint("auth", __name__)
-# 指定 users collection
-users_ref = db.collection("users")
-
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
@@ -14,21 +15,20 @@ def register():
     print("接收到的資料：", data)  # 打印請求的資料
     email = data.get('email')
     password = data.get('password')
-    
-    # 檢查是否已經註冊
-    existing_user = users_ref.where("email", "==", email).get()
-    if existing_user:  # 確保有查到資料才判斷已註冊
-        return jsonify({'meesage':'Email already registered!'}), 400
-    
+    if not email or not password:
+        return jsonify({"error":"不能為空"}), 400
+        
     try:
-        # 使用 Firebase Authentication 創建新用戶
-        user = auth.create_user(email=email, password=password)
-    
-        # 把 email 存入 Firestore
-        users_ref.document(user.uid).set({"email": email})
-        return jsonify({"message": "註冊成功", "uid": user.uid}), 201
-    except Exception as e:
+        user_id = register_user(email, password)
+        return jsonify({"message": "註冊成功", "user_id": user_id}), 201
+    except ValueError as e:
+        print("真實錯誤", e)
+        print("真實錯誤", type(e))
         return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        print("真實錯誤", e)
+        print("真實錯誤", type(e))
+        return jsonify({'message':'伺服器錯誤'}) ,500
 
     
 @auth_bp.route("/login", methods=["POST"])
@@ -41,15 +41,29 @@ def login():
         return jsonify({"error": "請提供 email 和 password"}), 400
     
     # 檢查是否已經註冊
-    existing_user = users_ref.where("email", "==", email).get()
-    if not existing_user:  # 確保有查到資料才判斷已註冊
-        return jsonify({'meesage':'Email not exist , please registe!'}), 400
-    
-     # Firebase Authentication 驗證密碼
     try:
-        user = auth.get_user_by_email(email)  # 確保帳號存在
-        return jsonify({"message": "登入成功", "uid": user.uid}), 200
+        existing_user = login_user(email, password)
+        return {
+            "uid" : existing_user["uid"],
+            "idToken" : existing_user["idToken"],
+            "email" : email
+        }
     except Exception as e:
-        return jsonify({"error": "登入失敗，請確認帳號或密碼"}), 400
+        return jsonify({"error":"回傳錯誤"}), 400
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        id_token = request.headers.get("Authorization")
+        print("收到 token：", id_token)
+        if not id_token:
+            return jsonify({"error":"請先登入"}), 401
+        try:
+            user_info=verify_id_token(id_token)
 
+            g.user = user_info# ✅ 暫存 user info 給後面的 view function 用
+            g.user_id = user_info["uid"]
+        except Exception as e:
+            return jsonify({"error":str(e)}), 401
+        return f(*args, **kwargs)
+    return decorated_function

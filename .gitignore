@@ -1,5 +1,6 @@
 # 忽略 Firebase 服務帳戶金鑰
 serviceAccountKey.json
+firebase_config.py
 
 firebase_config.py
 
@@ -9,5 +10,9 @@ firebase_config.py
 __pycache__/
 *.pyc
 
-dir_text/*.json
-dir_text/*.txt
+# 忽略前端互動產生的資料夾
+dir_audio/
+dir_stt_result/
+dir_text/
+dir_tts_result/
+

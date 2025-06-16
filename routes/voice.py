@@ -17,6 +17,17 @@ TTS_UPLOADS_FOLDER = "dir_tts_result"
 def tests():
     return "tests4444"
 
+# 儲存 endpoint
+@voice_bp.route("/upload_audio", methods=["POST"])
+def upload_audio():
+    try:
+        file = request.files["file"]
+        filename = file.filename
+        save_path = os.path.join(AUDIO_FOLDER, filename)
+        file.save(save_path)
+        return jsonify({"message": "上傳成功", "filename": filename})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # === 語音轉文字 STT ==
 @voice_bp.route("/stt", methods=["POST"])
@@ -64,38 +75,41 @@ def stt():
 # === 文字轉語音 TTS ===
 @voice_bp.route("/tts", methods=["POST"])
 def tts():
-    try:        
-        filename = request.json.get("filename")  # 例如 analyzed_text_001.json
-        if not filename:
-            return jsonify({"error": "請提供 JSON 檔案名稱"}), 400
-        
-        filepath = os.path.join(TEXT_FOLDER, filename)
-        
-        if not os.path.exists(filepath):
-            return jsonify({"error": f"找不到檔案：{filename}"}), 404
-        
+    try:
+        # 支援直接傳文字（優先處理）
+        text = request.json.get("text")
 
-        # 讀取 JSON 檔
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        text = data.get("text")
         if not text:
-            return jsonify({"error": "JSON 檔內沒有 text 欄位"}), 400
+            # 如果沒傳文字，則檢查 filename → 讀檔案取得文字
+            filename = request.json.get("filename")
+            if not filename:
+                return jsonify({"error": "請提供 'text' 或 'filename'"}), 400
+
+            filepath = os.path.join(TEXT_FOLDER, filename)
+            if not os.path.exists(filepath):
+                return jsonify({"error": f"找不到檔案：{filename}"}), 404
+
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                text = data.get("text")
+
+            if not text:
+                return jsonify({"error": "JSON 檔內沒有 'text' 欄位"}), 400
 
         # 呼叫 Azure TTS
         speech_config = get_speech_config()
-        os.makedirs(TTS_UPLOADS_FOLDER, exist_ok=True)  # 確保資料夾存在
+        os.makedirs(TTS_UPLOADS_FOLDER, exist_ok=True)
+
         output_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
         output_path = os.path.join(TTS_UPLOADS_FOLDER, output_filename)
-        
-        # 這裡新增想要的語音模型設定     
-        speech_config.speech_synthesis_voice_name = "zh-CN-XiaoshuangNeural"
 
+        # 設定語音樣式（可自定義）
+        speech_config.speech_synthesis_voice_name = "zh-CN-XiaoshuangNeural"
         audio_config = speechsdk.audio.AudioOutputConfig(filename=output_path)
         synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
 
         result = synthesizer.speak_text_async(text).get()
+
         if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
             return jsonify({
                 "message": "TTS 成功",
@@ -106,6 +120,7 @@ def tts():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 from datetime import datetime
