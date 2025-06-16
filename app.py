@@ -2,8 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from firebase_admin import credentials, firestore
 from flask_cors import CORS
 from dotenv import load_dotenv
-from firebase_config import initialize_firebase
-from routes.auth_routes import register, login  # 匯入 auth.py 中的函數 
+from firebase_config import initialize_firebase, firebase_config_dict
 import os
 
 load_dotenv()
@@ -11,7 +10,11 @@ firebase_credentials_path = os.getenv('FIREBASE_CREDENTIALS_PATH')
 initialize_firebase()
 
 app = Flask(__name__)
-CORS(app, origins="http://localhost:5173", methods=["GET", "POST", "DELETE", "OPTIONS"], supports_credentials=True)
+CORS(app,
+     origins="http://localhost:5173",
+     methods=["GET", "POST", "DELETE", "OPTIONS"],
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"])
 
 # 使用 Firestore 客戶端
 
@@ -22,14 +25,17 @@ db = firestore.client()
 from routes.auth_routes import auth_bp
 from routes.material_routes import material_bp
 from routes.calendar_routes import calendar_bp
+from routes.music_routes import music_bp
 from routes.voice import voice_bp
 from routes.gpt import gpt_bp
 from routes.quiz import quiz_bp
+
 
 # ✅ 註冊 blueprint 
 app.register_blueprint(auth_bp)
 app.register_blueprint(material_bp)  # ← 加上這行！
 app.register_blueprint(calendar_bp)
+app.register_blueprint(music_bp)
 app.register_blueprint(voice_bp,url_prefix='/routes')
 app.register_blueprint(gpt_bp, url_prefix="/gpt")
 app.register_blueprint(quiz_bp, url_prefix="/quiz")
