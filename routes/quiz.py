@@ -3,10 +3,13 @@ from openai_api.gpt_quiz_service import generate_quiz_from_chat_history
 from openai_api.gpt_service import all_chat_history
 from openai_api.gpt_quiz_service import generate_quiz_from_material_text
 
+from routes.auth_routes import login_required
+
 quiz_bp = Blueprint("quiz", __name__)
 
 # 根據對話產生題目
 @quiz_bp.route("/generate_quiz", methods=["POST"])
+@login_required
 def generate_quiz():
     try:
         data = request.get_json()
@@ -19,6 +22,7 @@ def generate_quiz():
 
 # 提交答案
 @quiz_bp.route("/submit", methods=["POST"])
+@login_required
 def submit_quiz():
     try:
         data = request.get_json()
