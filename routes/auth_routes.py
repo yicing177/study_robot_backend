@@ -55,7 +55,6 @@ def login_required(f):#voice 還沒處理
     @wraps(f)
     def decorated_function(*args, **kwargs):
         id_token = request.headers.get("Authorization")
-        print("收到 token：", id_token)
         if not id_token:
             return jsonify({"error":"請先登入"}), 401
         try:

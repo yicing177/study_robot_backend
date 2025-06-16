@@ -12,7 +12,7 @@ def initialize_firebase():
     if not firebase_admin._apps:  # 確保只初始化一次
 
         cred = credentials.Certificate('C:/Users/Chiu ling/Desktop/12projectback/study_robot_backend/firebase/serviceAccountKey.json')
-        firebase_admin.initialize_app(cred,{'storageBucket': 'project-771d3.appspot.com'})
+        firebase_admin.initialize_app(cred,{'storageBucket': 'project-771d3.firebasestorage.app'})
 
 
 # 確保 Firebase 已初始化
