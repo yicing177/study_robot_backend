@@ -1,5 +1,6 @@
 # 忽略 Firebase 服務帳戶金鑰
 serviceAccountKey.json
+firebase_confog_dict.json
 
 # 忽略環境變數檔案
 .env
