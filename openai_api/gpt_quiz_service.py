@@ -106,3 +106,61 @@ def generate_quiz_from_chat_history(chat_history, num_questions=3, difficulty="m
         print(f"[出題錯誤] {e}")
         return []
 
+def generate_quiz_from_material_text(material_text, num_questions=3, difficulty="medium"):
+    """
+    根據教材內容直接出題，不經過主題萃取
+    """
+    try:
+        difficulty_description = {
+            "easy": "題目以基本單字或文法為主，句型簡單、選項明確。",
+            "medium": "題目涉及一般句型與文法理解，需適度思考後作答。",
+            "hard": "題目包含進階句構、時態與語意陷阱，挑戰理解與推理能力。"
+        }.get(difficulty, "題目涉及一般句型與文法理解，需適度思考後作答。")
+
+        prompt = f"""請根據以下英文教材內容出 {num_questions} 題「{difficulty} 難度」的選擇題。
+
+題目要求如下：
+- 題目應涵蓋教材中的重要句型或概念
+- 每題包含：
+  - question（題目文字）
+  - options（四個選項）
+  - answer（正確答案）
+  - explanation（使用繁體中文簡要說明為何正解）
+- 難度說明：「{difficulty_description}」
+
+請以 JSON 陣列格式回傳，例如：
+[
+  {{
+    "question": "...",
+    "options": ["A", "B", "C", "D"],
+    "answer": "...",
+    "explanation": "..."
+  }}
+]
+
+以下是教材內容：
+{material_text}
+"""
+
+        response = openai.ChatCompletion.create(
+            model=os.getenv("GPT_MODEL", "gpt-4o"),
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        raw_text = response.choices[0].message["content"].strip()
+
+        match = re.search(r"\[\s*{.*?}\s*]", raw_text, re.DOTALL)
+        if match:
+            json_text = match.group(0)
+            return json.loads(json_text)
+        else:
+            print("[⚠️ 無法擷取有效 JSON 區段，原始內容如下]:\n", raw_text)
+            return []
+
+    except json.JSONDecodeError as je:
+        print(f"[JSON 解析錯誤] {je}")
+        return []
+
+    except Exception as e:
+        print(f"[教材出題錯誤] {e}")
+        return []
