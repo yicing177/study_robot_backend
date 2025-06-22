@@ -1,6 +1,6 @@
 from datetime import datetime
 class Material:
-    def __init__(self, user_id, title, material_id, type,file_url="None", upload_time="None"):
+    def __init__(self, user_id, title, material_id, type,file_url=None, upload_time=None):
         self.user_id=user_id
         self.title=title
         self.file_url=file_url

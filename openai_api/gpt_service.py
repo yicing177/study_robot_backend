@@ -156,12 +156,13 @@ def summarize_chat(user_id="unknown"):
         return "抱歉，無法整理學習重點，請稍後再試一次。"
 
 # 儲存歷史紀錄到資料庫 (測試中)
-def save_summary_to_firestore(user_id, summary_text):
+def save_summary_to_firestore(user_id, summary_text, title = None):
     try:
         doc_ref = db.collection('summaries').document()
         doc_ref.set({
             'user_id': user_id,
-            'summary': summary_text,
+            'title' : title or summary_text[:15],
+            'summary_text': summary_text,
             'timestamp': datetime.now()
         })
     except Exception as e:
@@ -179,7 +180,7 @@ def get_user_summaries(user_id):
         for doc in docs:
             data = doc.to_dict()
             summary_list.append({
-                'summary': data.get('summary', ''),
+                'summary_text': data.get('summary_text', ''),
                 'timestamp': data.get('timestamp').strftime("%Y-%m-%d %H:%M:%S")
             })
 
