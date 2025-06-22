@@ -2,6 +2,8 @@
 serviceAccountKey.json
 firebase_config.json
 
+firebase_config.py
+
 # 忽略環境變數檔案
 .env
 
@@ -13,3 +15,4 @@ dir_audio/
 dir_stt_result/
 dir_text/
 dir_tts_result/
+
