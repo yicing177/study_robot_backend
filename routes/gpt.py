@@ -54,13 +54,14 @@ def reset_chat():
     reset_chat_history()
     return jsonify({"message": "新的對話已開始！"})
 
-@gpt_bp.route('/history', methods=['POST'])
+
+@gpt_bp.route('/get_summaries', methods=['GET'])
 @login_required
 def get_history():
-    data = request.get_json()
     user_id = g.user_id
     summaries = get_user_summaries(user_id)
-    return jsonify({"summaries": summaries})
+    return jsonify({"summaries" : summaries} )
+
 
 @gpt_bp.route('/highlight_action', methods=['POST'])
 def highlight_action():
