@@ -184,6 +184,7 @@ def get_user_summaries(user_id):
         for doc in docs:
             data = doc.to_dict()
             summary_list.append({
+                'title' : data.get('title', ''),
                 'summary_text': data.get('summary_text', ''),
                 'timestamp': data.get('timestamp').strftime("%Y-%m-%d %H:%M:%S")
             })
