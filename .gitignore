@@ -1,6 +1,6 @@
 # 忽略 Firebase 服務帳戶金鑰
 serviceAccountKey.json
-firebase_config.py
+firebase_config.json
 
 firebase_config.py
 
