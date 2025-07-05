@@ -69,7 +69,7 @@ def analyze_speech_parameters_with_gpt(text):
         return {"emotion": "calm", "rate": 60, "style_degree": 1.0}
 
 # 對話邏輯
-def get_gpt_reply(user_input, user_id="unknown"):
+def get_gpt_reply(user_input, user_id):
     global chat_history
 
     print("✅ 收到 user_input：", user_input)
@@ -132,7 +132,7 @@ def get_gpt_reply(user_input, user_id="unknown"):
         }
 
 # 用歷史紀錄做總結
-def summarize_chat(user_id="unknown"):
+def summarize_chat(user_id):
     global all_chat_history
 
     try:
@@ -156,12 +156,17 @@ def summarize_chat(user_id="unknown"):
         return "抱歉，無法整理學習重點，請稍後再試一次。"
 
 # 儲存歷史紀錄到資料庫 (測試中)
-def save_summary_to_firestore(user_id, summary_text):
+def save_summary_to_firestore(user_id, summary_text, title = None):
     try:
+        if not title:
+            today_str = datetime.now().strftime("%#m/%#d")
+            title = f"{today_str} 重點整理"
+            
         doc_ref = db.collection('summaries').document()
         doc_ref.set({
             'user_id': user_id,
-            'summary': summary_text,
+            'title' : title ,
+            'summary_text': summary_text,
             'timestamp': datetime.now()
         })
     except Exception as e:
@@ -179,7 +184,8 @@ def get_user_summaries(user_id):
         for doc in docs:
             data = doc.to_dict()
             summary_list.append({
-                'summary': data.get('summary', ''),
+                'title' : data.get('title', ''),
+                'summary_text': data.get('summary_text', ''),
                 'timestamp': data.get('timestamp').strftime("%Y-%m-%d %H:%M:%S")
             })
 
