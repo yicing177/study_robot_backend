@@ -1,8 +1,7 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from openai_api.gpt_quiz_service import generate_quiz_from_chat_history
-from openai_api.gpt_service import all_chat_history
 from openai_api.gpt_quiz_service import generate_quiz_from_material_text
-
+from openai_api.gpt_service import conversation_pool
 from routes.auth_routes import login_required
 
 quiz_bp = Blueprint("quiz", __name__)
@@ -15,7 +14,11 @@ def generate_quiz():
         data = request.get_json()
         num_questions = data.get("num_questions", 3)
         difficulty = data.get("difficulty", "medium")
-        quiz = generate_quiz_from_chat_history(all_chat_history, num_questions)
+        user_id = g.user_id
+        conversation_id = data.get("conversation_id")
+        conv = conversation_pool.get_or_create(user_id, conversation_id)
+        chat_history = conv.export_current_round()  # 取得本輪對話歷史
+        quiz = generate_quiz_from_chat_history(chat_history, num_questions, difficulty)
         return jsonify({"quiz": quiz}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
