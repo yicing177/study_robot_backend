@@ -1,34 +1,23 @@
 # gpt_service.py（邏輯層）
+
 import openai
 import os
+import json
+import re
 from dotenv import load_dotenv
 from datetime import datetime
 from firebase_config import db  # Firestore 客戶端
 from openai_api.gpt_quiz_service import generate_quiz_from_chat_history # 呼叫生成題目邏輯
-import json
-import re
+from openai_api.conversation_manager import ConversationPool
+from openai_api.firebase_utils import save_summary_to_firestore
+
+# 初始化對話池
+conversation_pool = ConversationPool()
 
 # 載入環境變數
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 openai.organization = os.getenv("OPENAI_ORG_ID")
-
-# 初始系統提示
-system_prompt = {"role": "system", "content": "你是一個溫柔有耐心的英文學習伴讀機器人，請使用簡單語言並加入例句解釋。請用繁體中文回答。"}
-chat_history = [system_prompt]          # 有限長度，供 GPT 回應使用
-all_chat_history = [system_prompt]      # 完整記錄，供 summarize 使用
-
-MAX_HISTORY_LENGTH = 10 # 先預設10筆，測試時方便節省token
-
-# 儲存對話紀錄 (做總結與智慧多輪對答)
-def update_chat_history(role, content):
-    global chat_history, all_chat_history
-
-    chat_history.append({"role": role, "content": content})
-    while len(chat_history) > MAX_HISTORY_LENGTH + 1:
-        chat_history.pop(1)
-
-    all_chat_history.append({"role": role, "content": content})
 
 # 情緒相關設定
 def map_rate_to_scale(rate_label):
@@ -68,41 +57,27 @@ def analyze_speech_parameters_with_gpt(text):
         print(f"[語音參數分析錯誤] {e}")
         return {"emotion": "calm", "rate": 60, "style_degree": 1.0}
 
-# 對話邏輯
-def get_gpt_reply(user_input, user_id="unknown"):
-    global chat_history
-
-    print("✅ 收到 user_input：", user_input)
-    print("✅ 當前金鑰長度：", len(openai.api_key))  # 確認 key 有被載入
-
+# GPT對話主邏輯
+def get_gpt_reply(user_input, user_id="unknown", conversation_id=None):
+    #從對話池撈指定的對話
+    conv = conversation_pool.get_or_create(user_id, conversation_id)
     try:
-        update_chat_history("user", user_input)
-
+        conv.append_message("user", user_input)
         response = openai.ChatCompletion.create(
-            model="gpt-4o", # 測試時先用4o節省token
-            messages=chat_history
+            model="gpt-4o",
+            messages=conv.get_chat_history_for_gpt()
         )
         reply_text = response.choices[0].message["content"]
-        update_chat_history("assistant", reply_text)
+        conv.append_message("assistant", reply_text)
 
-        # 存回覆到 dir_text/
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         folder_path = "dir_text"
         os.makedirs(folder_path, exist_ok=True)
 
-        # 呼叫 GPT 判斷情緒
         speech_settings = analyze_speech_parameters_with_gpt(reply_text)
-
-        # 清理 TTS 用的文字
         cleaned_tts_text = remove_emoji(clean_text_for_tts(reply_text))
 
-        # 存 .txt
-        filename = f"{user_id}_{timestamp}.txt"
-        file_path = os.path.join(folder_path, filename)
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(reply_text)
-
-        # 存 .JSON
+        # 儲存 TTS JSON
         json_path = os.path.join(folder_path, f"{user_id}_{timestamp}.json")
         with open(json_path, "w", encoding="utf-8") as jf:
             json.dump({
@@ -120,7 +95,6 @@ def get_gpt_reply(user_input, user_id="unknown"):
             "style_degree": speech_settings["style_degree"]
         }
 
-
     except Exception as e:
         print(f"[GPT 錯誤] {e}")
         return {
@@ -131,63 +105,29 @@ def get_gpt_reply(user_input, user_id="unknown"):
             "style_degree": 1.0
         }
 
-# 用歷史紀錄做總結
-def summarize_chat(user_id="unknown"):
-    global all_chat_history
-
+# 總結主邏輯 (含自動整合)
+def summarize_chat(user_id="unknown", conversation_id=None):
+    conv = conversation_pool.get_or_create(user_id, conversation_id)
     try:
-        history_copy = all_chat_history.copy()
-        history_copy.append({
-            "role": "user",
-            "content": "請根據以上對話，整理出這次學習內容的重點摘要，使用條列式。"
-        })
-
+        messages = conv.get_summary_input()
         response = openai.ChatCompletion.create(
             model="gpt-4",
-            messages=history_copy
+            messages=messages
         )
         summary_text = response.choices[0].message["content"]
+        conv.append_summary(summary_text)
 
-        save_summary_to_firestore(user_id, summary_text)
-        return summary_text
+        # 合併所有摘要成一份整體摘要（純文字接起來）
+        all_summaries = [s["text"] for s in conv.export_summary()]
+        full_summary = "\n".join(all_summaries)
 
+        # 儲存合併後的總結到 Firestore
+        save_summary_to_firestore(user_id, conversation_id, full_summary)
+
+        return full_summary
     except Exception as e:
-        print(f"[總算錯誤] {e}")
+        print(f"[總結錯誤] {e}")
         return "抱歉，無法整理學習重點，請稍後再試一次。"
-
-# 儲存歷史紀錄到資料庫 (測試中)
-def save_summary_to_firestore(user_id, summary_text):
-    try:
-        doc_ref = db.collection('summaries').document()
-        doc_ref.set({
-            'user_id': user_id,
-            'summary': summary_text,
-            'timestamp': datetime.now()
-        })
-    except Exception as e:
-        print(f"[Firestore 儲存錯誤] {e}")
-
-# 從資料庫調用總結 (測試中)
-def get_user_summaries(user_id):
-    try:
-        docs = db.collection('summaries')\
-                 .where('user_id', '==', user_id)\
-                 .order_by('timestamp', direction='DESCENDING')\
-                 .stream()
-
-        summary_list = []
-        for doc in docs:
-            data = doc.to_dict()
-            summary_list.append({
-                'summary': data.get('summary', ''),
-                'timestamp': data.get('timestamp').strftime("%Y-%m-%d %H:%M:%S")
-            })
-
-        return summary_list
-
-    except Exception as e:
-        print(f"[Firestore 查詢錯誤] {e}")
-        return []
 
 # 調用stt結果
 def get_text_from_stt_file(filepath):
@@ -200,14 +140,14 @@ def get_text_from_stt_file(filepath):
         return ""
 
 # 開啟新對話 (重製暫存紀錄)
-def reset_chat_history():
-    global chat_history, all_chat_history
-    chat_history = [system_prompt]
-    all_chat_history = [system_prompt]
+def reset_chat_history(user_id="unknown", conversation_id=None):
+    conv = conversation_pool.get_or_create(user_id, conversation_id)
+    conv.start_new_round()
 
-# 生成題目 (寫在另外一個py裡)
-def generate_quiz_from_chat(num_questions=3):
-    return generate_quiz_from_chat_history(all_chat_history, num_questions)
+# 生成題目 (主邏輯寫在gpt_quiz_service.py裡)
+def generate_quiz_from_chat(user_id="unknown", conversation_id=None, num_questions=3):
+    conv = conversation_pool.get_or_create(user_id,conversation_id)
+    return generate_quiz_from_chat_history(conv.export_messages(), num_questions)
 
 # 清除JSON的強調符號
 def clean_text_for_tts(text):
@@ -233,3 +173,18 @@ def remove_emoji(text):
     )
     return emoji_pattern.sub(r'', text)
 
+# 自動生成對話標題
+def generate_conversation_title(initial_message):
+    try:
+        prompt = [
+            {"role": "system", "content": "請根據這段對話內容生成一個 10 字以內的中文標題，簡潔描述主題，不要加引號。"},
+            {"role": "user", "content": initial_message[:100]}
+        ]
+        response = openai.ChatCompletion.create(
+            model=os.getenv("GPT_MODEL", "gpt-4o"),
+            messages=prompt
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print("[標題產生失敗]", e)
+        return "未命名對話"
