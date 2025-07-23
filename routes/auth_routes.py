@@ -5,6 +5,7 @@ from functools import wraps
 from firebase_config import db  # 從 firebase_config 匯入 Firestore
 from services.auth_service import register_user, login_user
 from services.auth_service import verify_id_token
+import traceback
 
 # 建立 Blueprint 實例
 auth_bp = Blueprint("auth", __name__)
@@ -49,6 +50,8 @@ def login():
             "email" : email
         }
     except Exception as e:
+        print("[Login 錯誤細節]", str(e))
+        traceback.print_exc()
         return jsonify({"error":"回傳錯誤"}), 400
 
 def login_required(f):#voice 還沒處理
@@ -57,6 +60,8 @@ def login_required(f):#voice 還沒處理
         id_token = request.headers.get("Authorization")
         if not id_token:
             return jsonify({"error":"請先登入"}), 401
+        if id_token.startswith("Bearer "):
+            id_token = id_token.split(" ")[1]
         try:
             user_info=verify_id_token(id_token)
 
