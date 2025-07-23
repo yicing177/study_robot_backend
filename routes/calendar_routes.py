@@ -13,6 +13,7 @@ def create():
     data = request.json
     if not data:
         return jsonify({"error": "沒有收到 JSON 資料"}), 400
+    data["user_id"] = user_id
 
     try:
         calendar = create_calendar(data)
