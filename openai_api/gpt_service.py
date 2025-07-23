@@ -61,6 +61,7 @@ def analyze_speech_parameters_with_gpt(text):
 def get_gpt_reply(user_input, user_id="unknown", conversation_id=None):
     #從對話池撈指定的對話
     conv = conversation_pool.get_or_create(user_id, conversation_id)
+
     try:
         conv.append_message("user", user_input)
         response = openai.ChatCompletion.create(
@@ -108,6 +109,7 @@ def get_gpt_reply(user_input, user_id="unknown", conversation_id=None):
 # 總結主邏輯 (含自動整合)
 def summarize_chat(user_id="unknown", conversation_id=None):
     conv = conversation_pool.get_or_create(user_id, conversation_id)
+
     try:
         messages = conv.get_summary_input()
         response = openai.ChatCompletion.create(

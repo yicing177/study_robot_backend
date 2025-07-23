@@ -10,8 +10,9 @@ def create_calendar(data):
     return calendar
 
 def get_calendars_by_user(user_id):
-    docs=db.collection("calendars").where("user_id","==",user_id).stream()
-    return [Calendar.from_dict(doc.to_dict()) for doc in docs]
+        docs=db.collection("calendars").where("user_id","==",user_id).stream()
+        return [Calendar.from_dict(doc.to_dict()) for doc in docs]
+
 
 def delete_calendar(calendar_id, user_id):
     doc_ref=db.collection("calendars").document(calendar_id)
