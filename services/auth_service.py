@@ -34,7 +34,7 @@ def login_user(email: str, password: str):
         return {
             "uid" : user["localId"] ,
             "email" : email, 
-            "id_token" : user["idToken"]
+            "idToken" : user["idToken"]
         }
     except Exception as e:
         print("登入錯誤", e)
