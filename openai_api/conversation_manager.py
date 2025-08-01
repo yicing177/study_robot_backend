@@ -1,16 +1,21 @@
 #管理conversation與chat
 #使用pool與manager兩個類別
 
+from openai_api.firebase_utils import save_conversation_metadata
 from datetime import datetime
 import uuid
 from openai_api.firebase_utils import save_message_to_firestore, save_summary_to_firestore
+from models.chatmessage import Chatmessage
 
 # 管理單個對話中的多段聊天紀錄
 class ConversationManager:
     def __init__(self, conversation_id=None, user_id="unknown", system_prompt=None):
+        today_str = datetime.now().strftime("%m%d")
+        self.title = f"{today_str}重點整理"
         self.user_id = user_id
         self.conversation_id = conversation_id or str(uuid.uuid4())
-        self.title = None
+        self.create_at = datetime.utcnow()  # ✅ 建立時間
+        
 
         self.system_prompt = system_prompt or {
             "role": "system",
@@ -23,16 +28,30 @@ class ConversationManager:
 
         self.summary_parts = []  # 儲存每段 summary 的結果
 
-    def append_message(self, role, content):
-        msg = {
-            "role": role,
-            "content": content,
-            "timestamp": datetime.now().isoformat()
-        }
+        # ✅ 初始化時寫入 metadata 到 Firestore
 
-        self.chat_history.append(msg)
-        self.current_history.append(msg)
-        self.full_conversation_history.append(msg)
+
+        try:
+            save_conversation_metadata(
+                self.user_id,
+                self.conversation_id,
+                self.title or "未命名對話",  # 初始未設定 title，後面會用第一句 user 話補上
+                self.create_at
+            )
+        except Exception as e:
+            print("[Firestore 寫入 conversation metadata 失敗]", e)
+
+    def append_message(self, role, content):
+        msg = Chatmessage (
+            conversation_id = self.conversation_id,
+            role = role,
+            content = content,
+            create_at = datetime.now().isoformat(),
+        )
+
+        self.chat_history.append(msg.to_dict())
+        self.current_history.append(msg.to_dict())
+        self.full_conversation_history.append(msg.to_dict())
 
         # 控制 chat_history 長度
         MAX_HISTORY_LENGTH = 10
@@ -41,7 +60,7 @@ class ConversationManager:
 
         # 寫入 Firestore
         try:
-            save_message_to_firestore(self.user_id, self.conversation_id, msg)
+            save_message_to_firestore(self.user_id, msg)
         except Exception as e:
             print("[Firestore 寫入訊息失敗]", e)
 
@@ -62,11 +81,11 @@ class ConversationManager:
             self.summary_parts.append({
                 "part": 1,
                 "text": summary_text,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.utcnow()
             })
         else:
             self.summary_parts[0]["text"] += "\n" + summary_text
-            self.summary_parts[0]["timestamp"] = datetime.now().isoformat()
+            self.summary_parts[0]["timestamp"] = datetime.utcnow()
         
         # 寫入 Firestore
         try:
