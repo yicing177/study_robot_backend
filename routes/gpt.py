@@ -81,6 +81,7 @@ def get_history():
     summaries = []
     for doc in docs:
         data = doc.to_dict()
+        print(f"✅ 讀取到 summary：{data.get('summary')}")
         summaries.append({
             "conversation_id": doc.id,
             "title": data.get("title", "未命名對話"),

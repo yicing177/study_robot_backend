@@ -16,12 +16,23 @@ def save_summary_to_firestore(user_id, conversation_id, summary_text):
 
     summary_ref = db.collection("Users").document(user_id) \
                 .collection("Conversations").document(conversation_id)
-
-    summary_ref.set({
-        "summary": summary_text,
-        "updatedAt": datetime.now().isoformat(),
-    }, merge=True)
-
+    print(summary_ref.conversation_id)
+    try:
+        old_doc = summary_ref.get()
+        old_sum = ""
+        if old_doc.exists:
+            old_sum =old_doc.to_dict().get("summary") 
+        print("old one:" )
+        print(old_sum)
+        print("new:")
+        print(summary_text)
+        summary_ref.set({
+            "summary": summary_text,
+            "updatedAt": datetime.now().isoformat(),
+        }, merge=True)
+        print("success")
+    except Exception as e :
+        print("failed", e)
 def save_conversation_metadata(user_id, conversation_id, title, create_at):
 
     doc_ref = db.collection("Users").document(user_id).collection("Conversations").document(conversation_id)
