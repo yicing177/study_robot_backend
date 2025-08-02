@@ -150,7 +150,7 @@ def start_conversation():
     }), 200
 
 # 印出指定用戶所有對話列表
-@gpt_bp.route('/conversations', methods=['POST'])
+@gpt_bp.route('/conversations', methods=['GET'])
 @login_required
 def list_conversations():
     user_id = g.user_id
@@ -168,12 +168,11 @@ def list_conversations():
     return jsonify({"conversations": result}), 200
 
 # 取得使用者指定對話的完整對話紀錄、conversation_id、標題、summary
-@gpt_bp.route('/get_conversation', methods=['POST'])
+@gpt_bp.route('/get_conversation', methods=['GET'])
 @login_required
 def get_conversation():
-    data = request.get_json()
     user_id = g.user_id
-    conversation_id = data.get("conversation_id")
+    conversation_id =  request.args.get("conversation_id")
 
     if not conversation_id:
         return jsonify({"error": "請提供 conversation_id"}), 400
