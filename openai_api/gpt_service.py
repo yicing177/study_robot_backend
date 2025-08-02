@@ -1,5 +1,5 @@
 # gpt_service.py（邏輯層）
-
+import traceback
 import openai
 import os
 import json
@@ -61,6 +61,7 @@ def analyze_speech_parameters_with_gpt(text):
 def get_gpt_reply(user_input, user_id="unknown", conversation_id=None):
     #從對話池撈指定的對話
     conv = conversation_pool.get_or_create(user_id, conversation_id)
+    #print(f"印出 conversation_id: {conversation_id}")
 
     try:
         conv.append_message("user", user_input)
@@ -93,17 +94,21 @@ def get_gpt_reply(user_input, user_id="unknown", conversation_id=None):
             "filename": f"{user_id}_{timestamp}.json",
             "emotion": speech_settings["emotion"],
             "rate": speech_settings["rate"],
-            "style_degree": speech_settings["style_degree"]
+            "style_degree": speech_settings["style_degree"],
+            "conversation_id": conv.conversation_id if conv else None
         }
 
     except Exception as e:
         print(f"[GPT 錯誤] {e}")
+        traceback.print_exc()  # ✅ 印出完整錯誤行數與堆疊
+    
         return {
             "reply": "抱歉，我目前無法提供回覆，請稍後再試一次。",
             "filename": None,
             "emotion": "calm",
             "rate": 60,
-            "style_degree": 1.0
+            "style_degree": 1.0,
+            "conversation_id": conv.conversation_id if conv else None
         }
 
 # 總結主邏輯 (含自動整合)

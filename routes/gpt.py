@@ -53,7 +53,6 @@ def ask_from_stt():
 @gpt_bp.route('/summarize', methods=['POST'])
 @login_required
 def summarize():
-    data = request.get_json()
     user_id = g.user_id
     conversation_id = request.get_json().get("conversation_id")
 
@@ -72,7 +71,7 @@ def reset_chat():
     return jsonify({"message": "新的對話已開始！"})
 
 # 取得所有summary的清單
-@gpt_bp.route('/history', methods=['POST'])
+@gpt_bp.route('/history', methods=['GET'])
 @login_required
 def get_history():
     user_id = g.user_id
