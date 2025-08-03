@@ -17,6 +17,7 @@ def save_message_to_firestore(user_id, conversation_id, message):
     }
     doc_ref.set(message_data)
 
+
 def save_summary_to_firestore(user_id, conversation_id, summary_text):
     summary_ref = db.collection("Users").document(user_id) \
                 .collection("Conversations").document(conversation_id)
