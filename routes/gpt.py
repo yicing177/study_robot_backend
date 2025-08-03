@@ -1,5 +1,5 @@
 import uuid
-import datetime
+from datetime import datetime 
 
 from flask import Blueprint, request, jsonify,g
 from openai_api.gpt_service import (
@@ -12,12 +12,13 @@ from openai_api.gpt_service import (
 )
 from routes.auth_routes import login_required 
 from openai_api.gpt_highlight import handle_highlight_action, generate_tts_for_text
-from openai_api.firebase_utils import save_conversation_metadata
+from openai_api.firebase_utils import save_conversation_metadata,save_message_to_firestore
 
 from firebase_admin import firestore
 db = firestore.client()
 
 gpt_bp = Blueprint('gpt', __name__)
+
 
 @gpt_bp.route('/ask', methods=['POST'])
 @login_required
@@ -29,8 +30,26 @@ def ask():
 
     user_id = g.user_id
     conversation_id = data.get("conversation_id")  # 可選參數
+
+    # ✅ 儲存使用者訊息
+    save_message_to_firestore(user_id, conversation_id, {
+        "role": "user",
+        "content": user_input,
+        "timestamp": datetime.utcnow().isoformat()
+    })
+
+    # ✅ 呼叫 GPT 並拿到 assistant 回覆
     result = get_gpt_reply(user_input, user_id, conversation_id)
+
+    # ✅ 儲存 GPT 回覆
+    save_message_to_firestore(user_id, conversation_id, {
+        "role": "assistant",
+        "content": result["reply"],
+        "timestamp": datetime.utcnow().isoformat()
+    })
+
     return jsonify(result)
+
 
 
 @gpt_bp.route('/ask_from_stt', methods=['POST'])  # 從 STT JSON 自動抓輸入
@@ -72,7 +91,7 @@ def reset_chat():
     return jsonify({"message": "新的對話已開始！"})
 
 # 取得所有summary的清單
-@gpt_bp.route('/history', methods=['POST'])
+@gpt_bp.route('/history', methods=['GET'])
 @login_required
 def get_history():
     user_id = g.user_id
@@ -150,7 +169,7 @@ def start_conversation():
     }), 200
 
 # 印出指定用戶所有對話列表
-@gpt_bp.route('/conversations', methods=['POST'])
+@gpt_bp.route('/conversations', methods=['GET'])
 @login_required
 def list_conversations():
     user_id = g.user_id
@@ -160,7 +179,7 @@ def list_conversations():
     result = []
     for doc in docs:
         data = doc.to_dict()
-        result.append({
+        result.append({ 
             "conversation_id": doc.id,
             "title": data.get("title", "未命名對話")
         })
