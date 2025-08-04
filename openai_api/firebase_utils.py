@@ -9,11 +9,11 @@ def save_message_to_firestore(user_id, conversation_id, message):
     doc_ref = db.collection("Users").document(user_id) \
                 .collection("Conversations").document(conversation_id) \
                 .collection("Messages").document()
-
+    timestamp = message.get("timestamp") or message.get("create_at") or datetime.now().isoformat()
     message_data = {
         "role": message["role"],
         "content": message["content"],
-        "timestamp": message.get("timestamp", datetime.now().isoformat())
+        "timestamp": timestamp
     }
     doc_ref.set(message_data)
 
