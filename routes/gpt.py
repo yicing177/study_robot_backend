@@ -143,6 +143,7 @@ def start_conversation():
     data = request.get_json()
     user_id = g.user_id
     initial_message = data.get("initial_message", "")
+    print("📥 使用者初始訊息：", initial_message)
 
     # 建立新的對話物件
     conv = conversation_pool.get_or_create(user_id)
@@ -155,14 +156,17 @@ def start_conversation():
 
         # 2. 自動產生標題
         title = generate_conversation_title(initial_message)
+        print("⭐️ 產生的標題：", title)
         conv.title = title
         save_conversation_metadata(user_id, conv.conversation_id, conv.title)
+        print("✅ 使用 initial_message 產生 GPT 回覆與標題")
     else:
         # 沒提供初始訊息 → 預設用日期當標題
         date_str = datetime.datetime.now().strftime("%m/%d")
         conv.title = f"對話 {date_str}"
         save_conversation_metadata(user_id, conv.conversation_id, conv.title)  # ✅加這行
-
+        print("✅ 已儲存標題到 Firestore")
+        print("📅 沒有訊息，使用預設日期標題")
     return jsonify({
         "conversation_id": conv.conversation_id,
         "title": conv.title
@@ -209,8 +213,10 @@ def get_conversation():
             "timestamp": msg.get("timestamp")
         })
 
-    # 按照 timestamp 排序
-    messages.sort(key=lambda m: m.get("timestamp", ""))
+
+    # 按照 timestamp 排序（過濾掉無 timestamp 的訊息）
+    valid_messages = [m for m in messages if m.get("timestamp")]
+    valid_messages.sort(key=lambda m: m["timestamp"])
 
     # 讀取 summary 與 title
     conv_ref = db.collection("Users").document(user_id).collection("Conversations").document(conversation_id)
