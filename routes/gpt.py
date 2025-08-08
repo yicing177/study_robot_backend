@@ -30,23 +30,16 @@ def ask():
 
     user_id = g.user_id
     conversation_id = data.get("conversation_id")  # 可選參數
-
-    # ✅ 儲存使用者訊息
-    save_message_to_firestore(user_id, conversation_id, {
-        "role": "user",
-        "content": user_input,
-        "timestamp": datetime.utcnow().isoformat()
-    })
+    print("使用者傳來的 conversation_id：", conversation_id)
+    # # ✅ 儲存使用者訊息
+    # save_message_to_firestore(user_id, conversation_id, {
+    #     "role": "user",
+    #     "content": user_input,
+    #     "timestamp": datetime.utcnow().isoformat()
+    # })
 
     # ✅ 呼叫 GPT 並拿到 assistant 回覆
     result = get_gpt_reply(user_input, user_id, conversation_id)
-
-    # ✅ 儲存 GPT 回覆
-    save_message_to_firestore(user_id, conversation_id, {
-        "role": "assistant",
-        "content": result["reply"],
-        "timestamp": datetime.utcnow().isoformat()
-    })
 
     return jsonify(result)
 
@@ -169,7 +162,8 @@ def start_conversation():
         print("📅 沒有訊息，使用預設日期標題")
     return jsonify({
         "conversation_id": conv.conversation_id,
-        "title": conv.title
+        "title": conv.title,
+        "reply": reply  # ← 把 GPT 回覆也傳回去
     }), 200
 
 # 印出指定用戶所有對話列表
@@ -207,6 +201,8 @@ def get_conversation():
     messages = []
     for doc in messages_ref.stream():
         msg = doc.to_dict()
+        if not msg.get("timestamp"):
+            continue
         messages.append({
             "role": msg.get("role"),
             "content": msg.get("content"),
@@ -225,6 +221,6 @@ def get_conversation():
     return jsonify({
         "conversation_id": conversation_id,
         "title": conv_data.get("title", "未命名對話"),
-        "messages": messages,
+        "messages": valid_messages,
         "summary": conv_data.get("summary", "")
     }), 200
