@@ -65,7 +65,6 @@ def ask_from_stt():
 @gpt_bp.route('/summarize', methods=['POST'])
 @login_required
 def summarize():
-    data = request.get_json()
     user_id = g.user_id
     conversation_id = request.get_json().get("conversation_id")
 
