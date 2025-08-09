@@ -1,5 +1,5 @@
 import uuid
-import datetime
+from datetime import datetime 
 
 from flask import Blueprint, request, jsonify,g
 from openai_api.gpt_service import (
@@ -12,12 +12,13 @@ from openai_api.gpt_service import (
 )
 from routes.auth_routes import login_required 
 from openai_api.gpt_highlight import handle_highlight_action, generate_tts_for_text
-from openai_api.firebase_utils import save_conversation_metadata
+from openai_api.firebase_utils import save_conversation_metadata,save_message_to_firestore
 
 from firebase_admin import firestore
 db = firestore.client()
 
 gpt_bp = Blueprint('gpt', __name__)
+
 
 @gpt_bp.route('/ask', methods=['POST'])
 @login_required
@@ -29,8 +30,19 @@ def ask():
 
     user_id = g.user_id
     conversation_id = data.get("conversation_id")  # 可選參數
+    print("使用者傳來的 conversation_id：", conversation_id)
+    # # ✅ 儲存使用者訊息
+    # save_message_to_firestore(user_id, conversation_id, {
+    #     "role": "user",
+    #     "content": user_input,
+    #     "timestamp": datetime.utcnow().isoformat()
+    # })
+
+    # ✅ 呼叫 GPT 並拿到 assistant 回覆
     result = get_gpt_reply(user_input, user_id, conversation_id)
+
     return jsonify(result)
+
 
 
 @gpt_bp.route('/ask_from_stt', methods=['POST'])  # 從 STT JSON 自動抓輸入
@@ -123,6 +135,7 @@ def start_conversation():
     data = request.get_json()
     user_id = g.user_id
     initial_message = data.get("initial_message", "")
+    print("📥 使用者初始訊息：", initial_message)
 
     # 建立新的對話物件
     conv = conversation_pool.get_or_create(user_id)
@@ -135,21 +148,25 @@ def start_conversation():
 
         # 2. 自動產生標題
         title = generate_conversation_title(initial_message)
+        print("⭐️ 產生的標題：", title)
         conv.title = title
         save_conversation_metadata(user_id, conv.conversation_id, conv.title)
+        print("✅ 使用 initial_message 產生 GPT 回覆與標題")
     else:
         # 沒提供初始訊息 → 預設用日期當標題
         date_str = datetime.datetime.now().strftime("%m/%d")
         conv.title = f"對話 {date_str}"
         save_conversation_metadata(user_id, conv.conversation_id, conv.title)  # ✅加這行
-
+        print("✅ 已儲存標題到 Firestore")
+        print("📅 沒有訊息，使用預設日期標題")
     return jsonify({
         "conversation_id": conv.conversation_id,
-        "title": conv.title
+        "title": conv.title,
+        "reply": reply  # ← 把 GPT 回覆也傳回去
     }), 200
 
 # 印出指定用戶所有對話列表
-@gpt_bp.route('/conversations', methods=['POST'])
+@gpt_bp.route('/conversations', methods=['GET'])
 @login_required
 def list_conversations():
     user_id = g.user_id
@@ -159,7 +176,7 @@ def list_conversations():
     result = []
     for doc in docs:
         data = doc.to_dict()
-        result.append({
+        result.append({ 
             "conversation_id": doc.id,
             "title": data.get("title", "未命名對話")
         })
@@ -183,14 +200,18 @@ def get_conversation():
     messages = []
     for doc in messages_ref.stream():
         msg = doc.to_dict()
+        if not msg.get("timestamp"):
+            continue
         messages.append({
             "role": msg.get("role"),
             "content": msg.get("content"),
             "timestamp": msg.get("timestamp")
         })
 
-    # 按照 timestamp 排序
-    messages.sort(key=lambda m: m.get("timestamp", ""))
+
+    # 按照 timestamp 排序（過濾掉無 timestamp 的訊息）
+    valid_messages = [m for m in messages if m.get("timestamp")]
+    valid_messages.sort(key=lambda m: m["timestamp"])
 
     # 讀取 summary 與 title
     conv_ref = db.collection("Users").document(user_id).collection("Conversations").document(conversation_id)
@@ -199,6 +220,6 @@ def get_conversation():
     return jsonify({
         "conversation_id": conversation_id,
         "title": conv_data.get("title", "未命名對話"),
-        "messages": messages,
+        "messages": valid_messages,
         "summary": conv_data.get("summary", "")
     }), 200
