@@ -25,3 +25,4 @@ class Chatmessage:
             content=data.get("content"),
             timestamp=data.get("timestamp")
         )
+
