@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime 
+from flask_cors import cross_origin
 
 from flask import Blueprint, request, jsonify,g
 from openai_api.gpt_service import (
@@ -13,7 +14,7 @@ from openai_api.gpt_service import (
 from routes.auth_routes import login_required 
 from openai_api.gpt_highlight import handle_highlight_action, generate_tts_for_text
 from openai_api.firebase_utils import save_conversation_metadata,save_message_to_firestore
-
+from models.chatmessage import Chatmessage
 from firebase_admin import firestore
 db = firestore.client()
 
@@ -57,12 +58,36 @@ def ask_from_stt():
     user_input = get_text_from_stt_file(filepath)
     if not user_input:
         return jsonify({"error": "STT 檔案中找不到 transcript"}), 400
+    
+    user_msg = Chatmessage (
+        conversation_id = data.get("conversation_id"),
+        role = "user",
+        content = user_input,
+        timestamp = datetime.now().isoformat(),
+    )
+    save_message_to_firestore(user_id, user_msg)
 
     reply = get_gpt_reply(user_input, user_id)
+
+    bot_msg = Chatmessage (
+        conversation_id = data.get("conversation_id"),
+        role = "bot",
+        content = reply.get("reply"),
+        timestamp = datetime.now().isoformat(),
+    )
+    save_message_to_firestore(user_id, bot_msg)
+
+    
     return jsonify({"reply": reply})
 
 # 根據conversation_id做總結
 @gpt_bp.route('/summarize', methods=['POST'])
+@cross_origin(
+    origins="http://localhost:5173",
+    methods=["POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    supports_credentials=True,
+)
 @login_required
 def summarize():
     user_id = g.user_id
@@ -150,19 +175,20 @@ def start_conversation():
         title = generate_conversation_title(initial_message)
         print("⭐️ 產生的標題：", title)
         conv.title = title
-        save_conversation_metadata(user_id, conv.conversation_id, conv.title)
+
+        save_conversation_metadata(user_id, conv.conversation_id,conv.title, conv.create_at)
         print("✅ 使用 initial_message 產生 GPT 回覆與標題")
     else:
         # 沒提供初始訊息 → 預設用日期當標題
         date_str = datetime.datetime.now().strftime("%m/%d")
         conv.title = f"對話 {date_str}"
-        save_conversation_metadata(user_id, conv.conversation_id, conv.title)  # ✅加這行
+        #save_conversation_metadata(user_id, conv.conversation_id, conv.title)  # ✅加這行
         print("✅ 已儲存標題到 Firestore")
         print("📅 沒有訊息，使用預設日期標題")
     return jsonify({
         "conversation_id": conv.conversation_id,
         "title": conv.title,
-        "reply": reply  # ← 把 GPT 回覆也傳回去
+        "reply": reply.get("reply")  # ← 把 GPT 回覆也傳回去
     }), 200
 
 # 印出指定用戶所有對話列表
