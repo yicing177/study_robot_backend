@@ -10,7 +10,7 @@ from models.chatmessage import Chatmessage
 # 管理單個對話中的多段聊天紀錄
 class ConversationManager:
     def __init__(self, conversation_id=None, user_id="unknown", system_prompt=None):
-        today_str = datetime.now().strftime("%m%d")
+        today_str = datetime.now().strftime("%m%d%H%S")
         self.title = f"{today_str}重點整理"
         self.user_id = user_id
         self.conversation_id = conversation_id or str(uuid.uuid4())
@@ -46,7 +46,7 @@ class ConversationManager:
             conversation_id = self.conversation_id,
             role = role,
             content = content,
-            create_at = datetime.now().isoformat(),
+            timestamp = datetime.now().isoformat(),
         )
 
         self.chat_history.append(msg.to_dict())
