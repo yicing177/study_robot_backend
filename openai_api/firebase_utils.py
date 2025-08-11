@@ -10,7 +10,14 @@ def save_message_to_firestore(user_id, chat_message : Chatmessage):
                 .collection("Conversations").document(chat_message.conversation_id) \
                 .collection("Messages").document()
 
-    doc_ref.set(chat_message.to_dict())
+    timestamp = chat_message.timestamp or firestore.SERVER_TIMESTAMP
+    message_data = {
+        "role": chat_message.role,
+        "content": chat_message.content,
+        "timestamp": timestamp
+    }
+    doc_ref.set(message_data)
+
 
 def save_summary_to_firestore(user_id, conversation_id, summary_text):
 
