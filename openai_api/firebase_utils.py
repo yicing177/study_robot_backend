@@ -23,7 +23,9 @@ def save_summary_to_firestore(user_id, conversation_id, summary_text):
 
     summary_ref = db.collection("Users").document(user_id) \
                 .collection("Conversations").document(conversation_id)
-    print(summary_ref.conversation_id)
+
+    print("conversation_id:" ,conversation_id)
+
     try:
         old_doc = summary_ref.get()
         old_sum = ""

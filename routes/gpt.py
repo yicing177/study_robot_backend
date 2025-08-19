@@ -91,7 +91,11 @@ def ask_from_stt():
 @login_required
 def summarize():
     user_id = g.user_id
+    data = request.get_json()
+    print("🔍 收到的 data:", data)
+
     conversation_id = request.get_json().get("conversation_id")
+    print("🔍 conversation_id:", conversation_id)  # debug 用，之後可刪除
 
     if not conversation_id:
         return jsonify({"error": "請提供 conversation_id"}), 400
@@ -194,107 +198,75 @@ def start_conversation():
 
 # 印出指定用戶所有對話列表
 @gpt_bp.route('/conversations', methods=['GET'])
-# @login_required
-# def list_conversations():
-#     user_id = g.user_id
-#     conversations_ref = db.collection("Users").document(user_id).collection("Conversations")
+@login_required
+def list_conversations():
+    user_id = g.user_id
+    conversations_ref = db.collection("Users").document(user_id).collection("Conversations")
 
-#     docs = conversations_ref.stream()
-#     result = []
-#     for doc in docs:
-#         data = doc.to_dict()
-#         result.append({ 
-#             "conversation_id": doc.id,
-#             "title": data.get("title", "未命名對話")
-#         })
+    docs = conversations_ref.stream()
+    result = []
+    for doc in docs:
+        data = doc.to_dict()
+        result.append({ 
+            "conversation_id": doc.id,
+            "title": data.get("title", "未命名對話")
+        })
 
-#     return jsonify({"conversations": result}), 200
+    return jsonify({"conversations": result}), 200
 
-# # 取得使用者指定對話的完整對話紀錄、conversation_id、標題、summary
-# @gpt_bp.route('/get_conversation', methods=['GET'])
-# @login_required
-# def get_conversation():
-#     user_id = g.user_id
-#     conversation_id =  request.args.get("conversation_id")
+# 取得使用者指定對話的完整對話紀錄、conversation_id、標題、summary
+@gpt_bp.route('/get_conversation', methods=['GET'])#, 'OPTIONS'
 
-#     if not conversation_id:
-#         return jsonify({"error": "請提供 conversation_id"}), 400
-
-#     # 讀取 Messages
-#     messages_ref = db.collection("Users").document(user_id).collection("Conversations") \
-#                      .document(conversation_id).collection("Messages")
-#     messages = []
-#     for doc in messages_ref.stream():
-#         msg = doc.to_dict()
-#         if not msg.get("timestamp"):
-#             continue
-#         messages.append({
-#             "role": msg.get("role"),
-#             "content": msg.get("content"),
-#             "timestamp": msg.get("timestamp")
-#         })
-
-
-#     # # 按照 timestamp 排序（過濾掉無 timestamp 的訊息）
-#     valid_messages = [m for m in messages if m.get("timestamp")]
-#     valid_messages.sort(key=lambda m: m["timestamp"])
-
-#     # 讀取 summary 與 title
-#     conv_ref = db.collection("Users").document(user_id).collection("Conversations").document(conversation_id)
-#     conv_data = conv_ref.get().to_dict() if conv_ref.get().exists else {}
-
-#     return jsonify({
-#         "conversation_id": conversation_id,
-#         "title": conv_data.get("title", "未命名對話"),
-#         "messages": valid_messages,
-#         "summary": conv_data.get("summary", "")
-#     }), 200
-@cross_origin(
-    origins='http://localhost:5173',
-    methods=['GET','OPTIONS'],
-    allow_headers=['Authorization','Content-Type'],
-    always_send=True,   # 就算錯也帶 CORS 標頭
-)
-
-
+@login_required
 def get_conversation():
-    try:
-        user_id = g.user_id
-        conv_id = request.args.get("conversation_id")
-        if not conv_id:
-            return jsonify({"error": "請提供 conversation_id"}), 400
+    user_id = g.user_id
+    conversation_id =  request.args.get("conversation_id")
 
-        conv_ref = db.collection("Users").document(user_id) \
-                     .collection("Conversations").document(conv_id)
+    if not conversation_id:
+        return jsonify({"error": "請提供 conversation_id"}), 400
 
-        # 直接由 Firestore 依 timestamp 排序，不在 Python 內 sort
-        msgs_ref = conv_ref.collection("Messages").order_by("timestamp")
-
-        messages = []
-        for doc in msgs_ref.stream():
-            msg = doc.to_dict() or {}
-            ts = msg.get("timestamp")
-            if not ts:
+    # 讀取 Messages
+    messages_ref = db.collection("Users").document(user_id).collection("Conversations") \
+                     .document(conversation_id).collection("Messages")
+    messages = []
+    for doc in messages_ref.stream():
+        msg = doc.to_dict()
+        if not msg.get("timestamp"):
+            continue
+        ts = msg["timestamp"]
+        if isinstance(ts, str):
+            try:
+                ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            except:
                 continue
+        msg["timestamp"] = ts
+        messages.append(msg)
+        # messages.append({
+        #     "role": msg.get("role"),
+        #     "content": msg.get("content"),
+        #     "timestamp": msg.get("timestamp")
+        # })
 
-            content = msg.get("text") or msg.get("content") or ""
-            messages.append({
-                "role": msg.get("role", "assistant"),
-                "text": content,                # 給前端 m.text
-                "content": content,             # 相容 m.content
-                "timestamp": ts.isoformat() if hasattr(ts, "isoformat") else str(ts),
-            })
+        
+     # 排序
+    messages.sort(key=lambda m: m["timestamp"])
 
-        snap = conv_ref.get()
-        conv_data = snap.to_dict() if snap.exists else {}
+    # 再轉回字串給前端
+    for m in messages:
+        m["timestamp"] = m["timestamp"].isoformat()
 
-        return jsonify({
-            "conversation_id": conv_id,
-            "title": conv_data.get("title", "未命名對話"),
-            "summary": conv_data.get("summary", ""),
-            "messages": messages
-        }), 200
+    # # # 按照 timestamp 排序（過濾掉無 timestamp 的訊息）
+    # valid_messages = [m for m in messages if m.get("timestamp")]
+    # valid_messages.sort(key=lambda m: m["timestamp"])
 
-    except Exception as e:
-        print("[get_conversation error]", repr(e))
-        return jsonify({"error": "server_error", "detail": str(e)}), 500
+    # 讀取 summary 與 title
+    conv_ref = db.collection("Users").document(user_id).collection("Conversations").document(conversation_id)
+    conv_data = conv_ref.get().to_dict() if conv_ref.get().exists else {}
+
+    return jsonify({
+        "conversation_id": conversation_id,
+        "title": conv_data.get("title", "未命名對話"),
+        "messages": messages,#valid_messages
+        "summary": conv_data.get("summary", "")
+    }), 200
+

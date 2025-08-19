@@ -10,15 +10,32 @@ firebase_credentials_path = os.getenv('FIREBASE_CREDENTIALS_PATH')
 initialize_firebase()
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5173"], supports_credentials=True)
+CORS(
+    app,
+    resources={
+        r"/gpt/*": {
+            "origins": ["http://localhost:5173", "http://127.0.0.1:5173"]
+        },
+        r"/get_all_materials": {
+            "origins": ["http://localhost:5173", "http://127.0.0.1:5173"]
+        },
+        # 如果還有其他路由要開放，照這個格式加進來
+    },
+    supports_credentials=True,                     # 前端若有 withCredentials / cookie
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+    expose_headers=["Content-Type"],
+    max_age=86400,                                 # 預檢快取 1 天，少打一堆 OPTIONS
+)
+
+# CORS(app, origins=["http://localhost:5173"], supports_credentials=True)
 # CORS(app,
 #     resources={r"/gpt/*": {"origins": "http://localhost:5173"},
-#     r"/get_all_materials": {"origins": "http://localhost:5173"}},
+#             r"/get_all_materials": {"origins": "http://localhost:5173"}},
     
 #      methods=["GET", "POST", "DELETE", "OPTIONS"],
 #      supports_credentials=True,
 #      allow_headers=["Content-Type", "Authorization"])
-
 # 使用 Firestore 客戶端
 
 db = firestore.client()
