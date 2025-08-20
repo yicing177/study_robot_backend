@@ -19,6 +19,16 @@ CORS(
         r"/get_all_materials": {
             "origins": ["http://localhost:5173", "http://127.0.0.1:5173"]
         },
+        # ✅ 加上 quiz（建議用 * 吃掉子路徑）
+        r"/quiz*": {
+            "origins": ["http://localhost:5173", "http://127.0.0.1:5173"]
+        },
+        r"/routes/tts": {
+            "origins": ["http://localhost:5173", "http://127.0.0.1:5173"]
+        },
+        r"/summarize": {
+            "origins": ["http://localhost:5173", "http://127.0.0.1:5173"]
+        },
         # 如果還有其他路由要開放，照這個格式加進來
     },
     supports_credentials=True,                     # 前端若有 withCredentials / cookie

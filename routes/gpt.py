@@ -82,12 +82,12 @@ def ask_from_stt():
 
 # 根據conversation_id做總結
 @gpt_bp.route('/summarize', methods=['POST'])
-@cross_origin(
-    origins="http://localhost:5173",
-    methods=["POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
-    supports_credentials=True,
-)
+# @cross_origin(
+#     origins="http://localhost:5173",
+#     methods=["POST", "OPTIONS"],
+#     allow_headers=["Content-Type", "Authorization"],
+#     supports_credentials=True,
+# )
 @login_required
 def summarize():
     user_id = g.user_id
