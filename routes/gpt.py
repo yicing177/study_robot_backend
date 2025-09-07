@@ -59,15 +59,16 @@ def ask_from_stt():
     if not user_input:
         return jsonify({"error": "STT 檔案中找不到 transcript"}), 400
     
+    conversation_id = data.get("conversation_id")
+    
     user_msg = Chatmessage (
-        conversation_id = data.get("conversation_id"),
+        conversation_id = conversation_id,
         role = "user",
         content = user_input,
         timestamp = datetime.now().isoformat(),
     )
-    save_message_to_firestore(user_id, user_msg)
 
-    reply = get_gpt_reply(user_input, user_id)
+    reply = get_gpt_reply(user_input, user_id, conversation_id)
 
     bot_msg = Chatmessage (
         conversation_id = data.get("conversation_id"),
@@ -75,7 +76,6 @@ def ask_from_stt():
         content = reply.get("reply"),
         timestamp = datetime.now().isoformat(),
     )
-    save_message_to_firestore(user_id, bot_msg)
 
     
     return jsonify({"reply": reply})
@@ -104,8 +104,12 @@ def summarize():
 @login_required
 def reset_chat():
     user_id = g.user_id
-    reset_chat_history(user_id)
-    return jsonify({"message": "新的對話已開始！"})
+    new_conv = reset_chat_history(user_id)  # 改為「拿到新 conv 物件」
+    return jsonify({
+        "message": "新的對話已開始！",
+        "conversation_id": new_conv.conversation_id,
+        "title": new_conv.title
+    }), 200
 
 # 取得所有summary的清單
 @gpt_bp.route('/history', methods=['GET'])
