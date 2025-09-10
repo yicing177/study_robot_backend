@@ -7,7 +7,7 @@ from routes.auth_routes import login_required
 quiz_bp = Blueprint("quiz", __name__)
 
 # 根據對話產生題目
-@quiz_bp.route("/generate_quiz", methods=["POST"])
+@quiz_bp.route("/generate_quiz", methods=["POST","OPTION"])
 @login_required
 def generate_quiz():
     try:

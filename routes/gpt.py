@@ -82,16 +82,20 @@ def ask_from_stt():
 
 # 根據conversation_id做總結
 @gpt_bp.route('/summarize', methods=['POST'])
-@cross_origin(
-    origins="http://localhost:5173",
-    methods=["POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
-    supports_credentials=True,
-)
+# @cross_origin(
+#     origins="http://localhost:5173",
+#     methods=["POST", "OPTIONS"],
+#     allow_headers=["Content-Type", "Authorization"],
+#     supports_credentials=True,
+# )
 @login_required
 def summarize():
     user_id = g.user_id
+    data = request.get_json()
+    print("🔍 收到的 data:", data)
+
     conversation_id = request.get_json().get("conversation_id")
+    print("🔍 conversation_id:", conversation_id)  # debug 用，之後可刪除
 
     if not conversation_id:
         return jsonify({"error": "請提供 conversation_id"}), 400
@@ -118,6 +122,7 @@ def get_history():
     summaries = []
     for doc in docs:
         data = doc.to_dict()
+        #print(f"✅ 讀取到 summary：{data.get('summary')}")
         summaries.append({
             "conversation_id": doc.id,
             "title": data.get("title", "未命名對話"),
@@ -210,12 +215,12 @@ def list_conversations():
     return jsonify({"conversations": result}), 200
 
 # 取得使用者指定對話的完整對話紀錄、conversation_id、標題、summary
-@gpt_bp.route('/get_conversation', methods=['POST'])
+@gpt_bp.route('/get_conversation', methods=['GET'])#, 'OPTIONS'
+
 @login_required
 def get_conversation():
-    data = request.get_json()
     user_id = g.user_id
-    conversation_id = data.get("conversation_id")
+    conversation_id =  request.args.get("conversation_id")
 
     if not conversation_id:
         return jsonify({"error": "請提供 conversation_id"}), 400
@@ -228,16 +233,31 @@ def get_conversation():
         msg = doc.to_dict()
         if not msg.get("timestamp"):
             continue
-        messages.append({
-            "role": msg.get("role"),
-            "content": msg.get("content"),
-            "timestamp": msg.get("timestamp")
-        })
+        ts = msg["timestamp"]
+        if isinstance(ts, str):
+            try:
+                ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            except:
+                continue
+        msg["timestamp"] = ts
+        messages.append(msg)
+        # messages.append({
+        #     "role": msg.get("role"),
+        #     "content": msg.get("content"),
+        #     "timestamp": msg.get("timestamp")
+        # })
 
+        
+     # 排序
+    messages.sort(key=lambda m: m["timestamp"])
 
-    # 按照 timestamp 排序（過濾掉無 timestamp 的訊息）
-    valid_messages = [m for m in messages if m.get("timestamp")]
-    valid_messages.sort(key=lambda m: m["timestamp"])
+    # 再轉回字串給前端
+    for m in messages:
+        m["timestamp"] = m["timestamp"].isoformat()
+
+    # # # 按照 timestamp 排序（過濾掉無 timestamp 的訊息）
+    # valid_messages = [m for m in messages if m.get("timestamp")]
+    # valid_messages.sort(key=lambda m: m["timestamp"])
 
     # 讀取 summary 與 title
     conv_ref = db.collection("Users").document(user_id).collection("Conversations").document(conversation_id)
@@ -246,6 +266,7 @@ def get_conversation():
     return jsonify({
         "conversation_id": conversation_id,
         "title": conv_data.get("title", "未命名對話"),
-        "messages": valid_messages,
+        "messages": messages,#valid_messages
         "summary": conv_data.get("summary", "")
     }), 200
+
