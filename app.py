@@ -11,10 +11,12 @@ initialize_firebase()
 
 app = Flask(__name__)
 CORS(app,
-    resources={r"/gpt/*": {"origins": "http://localhost:5173"}},
-     methods=["GET", "POST", "DELETE", "OPTIONS"],
-     supports_credentials=True,
-     allow_headers=["Content-Type", "Authorization"])
+    origins="*",
+    methods=["GET", "POST", "DELETE", "OPTIONS"],
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization"])
+
+
 
 # 使用 Firestore 客戶端
 

@@ -25,7 +25,8 @@ def upload_material(user_id,file_stream,title,filename,file_type):
     return material
 
 def get_material(material_id, user_id):
-    doc=db.collection("materials").document( material_id).get()
+
+    doc=db.collection("materials").document(material_id).get()
     if doc.exists:
         data = doc.to_dict()
         if data.get("user_id") == user_id:

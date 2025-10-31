@@ -5,6 +5,9 @@ import azure.cognitiveservices.speech as speechsdk
 from azure_speech_config import get_speech_config
 import json
 from datetime import datetime
+from openai_api.gpt_service import clean_text_for_tts, remove_emoji
+
+
 
 voice_bp = Blueprint("voice", __name__)
 
@@ -78,6 +81,8 @@ def tts():
     try:
         # 支援直接傳文字（優先處理）
         text = request.json.get("text")
+        text = remove_emoji(clean_text_for_tts(text))
+
 
         if not text:
             # 如果沒傳文字，則檢查 filename → 讀檔案取得文字

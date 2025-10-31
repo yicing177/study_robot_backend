@@ -148,8 +148,11 @@ def get_text_from_stt_file(filepath):
 
 # 開啟新對話 (重製暫存紀錄)
 def reset_chat_history(user_id="unknown", conversation_id=None):
+    # 這裡傳入 None → 會建立新的 Conversation
     conv = conversation_pool.get_or_create(user_id, conversation_id)
-    conv.start_new_round()
+    # 不需要再 start_new_round()，新 conv 本來就是乾淨的
+    return conv  # ✅ 回傳給路由好帶回前端
+
 
 # 生成題目 (主邏輯寫在gpt_quiz_service.py裡)
 def generate_quiz_from_chat(user_id="unknown", conversation_id=None, num_questions=3):
@@ -157,16 +160,53 @@ def generate_quiz_from_chat(user_id="unknown", conversation_id=None, num_questio
     return generate_quiz_from_chat_history(conv.export_messages(), num_questions)
 
 # 清除JSON的強調符號
-def clean_text_for_tts(text):
-    # 移除 **、*、__、_ 強調語法
-    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
-    text = re.sub(r"__(.*?)__", r"\1", text)
-    text = re.sub(r"\*(.*?)\*", r"\1", text)
-    text = re.sub(r"_(.*?)_", r"\1", text)
+import re, unicodedata
 
-    # 移除 markdown 列表符號（如 - 列表）
-    text = re.sub(r"^- ", "", text, flags=re.MULTILINE)
-    return text
+_ZW_SPACES = u"\u200B\u200C\u200D\u200E\u200F\uFEFF"   # 零寬/方向符
+_BULLETS = "•●◦▪▫※・‧"                                  # 常見項目符號
+
+def clean_text_for_tts(text: str) -> str:
+    if not text:
+        return ""
+
+    # 1) 全形→半形，正規化（把全形 *、＿、冒號等轉成 ASCII）
+    t = unicodedata.normalize("NFKC", text)
+
+    # 2) 移除零寬字元、NBSP
+    t = re.sub(f"[{_ZW_SPACES}]", "", t)
+    t = t.replace("\u00A0", " ")
+
+    # 3) 移除多行程式碼區塊與行內程式碼
+    t = re.sub(r"```.*?```", "", t, flags=re.DOTALL)
+    t = re.sub(r"`([^`]*)`", r"\1", t)
+
+    # 4) 連結/圖片語法：保留文字
+    t = re.sub(r"!\[[^\]]*\]\([^)]+\)", "", t)          # 圖片整段去掉
+    t = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", t)      # [text](url) -> text
+
+    # 5) 標題與引用（#、>）
+    t = re.sub(r"^\s{0,3}#{1,6}\s*", "", t, flags=re.MULTILINE)
+    t = re.sub(r"^\s*>\s*", "", t, flags=re.MULTILINE)
+
+    # 6) 列表記號：行首 - * + 與「行首/行內的數字編號」都處理
+    t = re.sub(r"^\s*[-*+]\s+", "", t, flags=re.MULTILINE)     # - * + 列表
+    t = re.sub(r"(^|\s)\d+\.\s+", r"\1", t, flags=re.MULTILINE)  # 這行是關鍵修正！
+    for b in _BULLETS:
+        t = t.replace(b, "")
+
+    # 7) 粗體/斜體（允許跨行）
+    t = re.sub(r"(\*\*|__)(.*?)\1", r"\2", t, flags=re.DOTALL)
+    t = re.sub(r"(\*|_)(.*?)\1", r"\2", t, flags=re.DOTALL)
+
+    # 8) 保險：若仍有散落 * 或 _（未成對），一律移除
+    t = t.replace("*", "").replace("_", "")
+
+    # 9) 空白整理
+    t = re.sub(r"[ \t]+\n", "\n", t)
+    t = re.sub(r"\n{3,}", "\n\n", t)
+    t = re.sub(r"[ \t]{2,}", " ", t)
+
+    return t.strip()
 
 # 清除JSON的表情符號
 def remove_emoji(text):
