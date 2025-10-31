@@ -253,3 +253,20 @@ def get_conversation():
         "messages": valid_messages,
         "summary": conv_data.get("summary", "")
     }), 200
+
+
+
+@gpt_bp.route('/update_title', methods=['POST', 'OPTIONS'])
+@login_required
+def update_title():
+    data = request.get_json()
+    user_id = g.user_id
+    conversation_id = data.get("conversation_id")
+    new_title = data.get("title")
+
+    conv_ref = db.collection("Users").document(user_id).collection("Conversations") \
+                     .document(conversation_id)
+    
+    conv_ref.update({"title":new_title})
+
+    return jsonify({"ok": True, "title": new_title, "conversation_id": conversation_id}), 200
