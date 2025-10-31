@@ -17,6 +17,7 @@ CORS(app,
     allow_headers=["Content-Type", "Authorization"])
 
 
+
 # 使用 Firestore 客戶端
 
 db = firestore.client()

@@ -208,7 +208,6 @@ def clean_text_for_tts(text: str) -> str:
 
     return t.strip()
 
-
 # 清除JSON的表情符號
 def remove_emoji(text):
     emoji_pattern = re.compile(

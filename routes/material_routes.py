@@ -40,4 +40,3 @@ def get_all_materials_route():
         return jsonify([m.to_dict() for m in materials]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
