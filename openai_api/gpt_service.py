@@ -153,6 +153,7 @@ def reset_chat_history(user_id="unknown", conversation_id=None):
     # 不需要再 start_new_round()，新 conv 本來就是乾淨的
     return conv  # ✅ 回傳給路由好帶回前端
 
+
 # 生成題目 (主邏輯寫在gpt_quiz_service.py裡)
 def generate_quiz_from_chat(user_id="unknown", conversation_id=None, num_questions=3):
     conv = conversation_pool.get_or_create(user_id,conversation_id)
@@ -206,6 +207,7 @@ def clean_text_for_tts(text: str) -> str:
     t = re.sub(r"[ \t]{2,}", " ", t)
 
     return t.strip()
+
 
 # 清除JSON的表情符號
 def remove_emoji(text):

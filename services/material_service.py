@@ -26,6 +26,7 @@ def upload_material(user_id,file_stream,title,filename,file_type):
 
 def get_material(material_id, user_id):
     doc=db.collection("materials").document(material_id).get()
+
     if doc.exists:
         data = doc.to_dict()
         if data.get("user_id") == user_id:
@@ -38,3 +39,4 @@ def get_material(material_id, user_id):
 def get_all_materials(user_id):
     docs = db.collection("materials").where("user_id", "==", user_id).get()
     return [Material.from_dict(doc.to_dict()) for doc in docs]
+

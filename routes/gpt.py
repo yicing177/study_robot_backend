@@ -60,24 +60,20 @@ def ask_from_stt():
         return jsonify({"error": "STT 檔案中找不到 transcript"}), 400
     
     conversation_id = data.get("conversation_id")
-    
     user_msg = Chatmessage (
         conversation_id = conversation_id,
+
         role = "user",
         content = user_input,
         timestamp = datetime.now().isoformat(),
     )
-
     reply = get_gpt_reply(user_input, user_id, conversation_id)
-
     bot_msg = Chatmessage (
         conversation_id = data.get("conversation_id"),
         role = "bot",
         content = reply.get("reply"),
         timestamp = datetime.now().isoformat(),
     )
-
-    
     return jsonify({"reply": reply})
 
 # 根據conversation_id做總結
@@ -110,6 +106,7 @@ def reset_chat():
         "conversation_id": new_conv.conversation_id,
         "title": new_conv.title
     }), 200
+
 
 # 取得所有summary的清單
 @gpt_bp.route('/history', methods=['GET'])
@@ -254,8 +251,6 @@ def get_conversation():
         "summary": conv_data.get("summary", "")
     }), 200
 
-
-
 @gpt_bp.route('/update_title', methods=['POST', 'OPTIONS'])
 @login_required
 def update_title():
@@ -270,3 +265,4 @@ def update_title():
     conv_ref.update({"title":new_title})
 
     return jsonify({"ok": True, "title": new_title, "conversation_id": conversation_id}), 200
+

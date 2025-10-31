@@ -10,6 +10,7 @@ def save_message_to_firestore(user_id, chat_message : Chatmessage):
                 .collection("Conversations").document(chat_message.conversation_id) \
                 .collection("Messages").document()
 
+
     timestamp = firestore.SERVER_TIMESTAMP
     message_data = {
         "role": chat_message.role,
@@ -27,6 +28,8 @@ def save_summary_to_firestore(user_id, conversation_id, summary_text):
     summary_ref.set({
         "summary": summary_text,
         "updatedAt": firestore.SERVER_TIMESTAMP,
+
+
     }, merge=True)
 
 def save_conversation_metadata(user_id, conversation_id, title, create_at):

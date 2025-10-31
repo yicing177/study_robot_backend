@@ -2,7 +2,6 @@
 serviceAccountKey.json
 firebase_config.json
 firebase_config_dict.json
-
 firebase_config.py
 
 # 忽略環境變數檔案

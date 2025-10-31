@@ -7,6 +7,7 @@ import json
 from datetime import datetime
 from openai_api.gpt_service import clean_text_for_tts, remove_emoji
 
+
 voice_bp = Blueprint("voice", __name__)
 
 AUDIO_FOLDER = "dir_audio"
